@@ -1,6 +1,9 @@
 # Backup files
 Qfinal_backup_*.html
 
+# Original file with API keys (keep private)
+Qfinal.html
+
 # macOS system files
 .DS_Store
 .DS_Store?
