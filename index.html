@@ -1259,6 +1259,13 @@ Shreyansh</textarea>
     BU2: load('mxq_api_key_BU2') || 'YOUR_BU2_API_KEY_HERE'
   };
   
+  // Debug: Log what was loaded
+  console.log('API_KEYS loaded:', {
+    main: API_KEYS.main.substring(0, 10) + '...',
+    BU1: API_KEYS.BU1.substring(0, 10) + '...',
+    BU2: API_KEYS.BU2.substring(0, 10) + '...'
+  });
+  
   // Token tracking for each key
   const TOKEN_LIMITS = {
     main: 200,
@@ -2416,6 +2423,7 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     if(newKey && newKey.length > 10) {
       API_KEYS.main = newKey;
       save('mxq_api_key_main', newKey);
+      console.log('API key saved:', newKey.substring(0, 10) + '...');
       toast('API key saved successfully!');
     } else {
       toast('Please enter a valid API key');
