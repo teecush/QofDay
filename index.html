@@ -1254,9 +1254,9 @@ Shreyansh</textarea>
   const GEMINI_MODEL_DEFAULT='gemini-2.0-flash';
   // API Keys - Main and 2 Backups
   const API_KEYS = {
-    main: 'YOUR_MAIN_API_KEY_HERE',
-    BU1: 'YOUR_BU1_API_KEY_HERE',
-    BU2: 'YOUR_BU2_API_KEY_HERE'
+    main: load('mxq_api_key_main') || 'YOUR_MAIN_API_KEY_HERE',
+    BU1: load('mxq_api_key_BU1') || 'YOUR_BU1_API_KEY_HERE',
+    BU2: load('mxq_api_key_BU2') || 'YOUR_BU2_API_KEY_HERE'
   };
   
   // Token tracking for each key
@@ -2341,8 +2341,9 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     updateTokenProgress();
   }
   $('#aiBtn').onclick=async()=>{ 
-    const savedKey = load('mxq_ai_key');
-    $('#aiKey').value = savedKey || 'YOUR_MAIN_API_KEY_HERE'; 
+    // Load the current API key from the API_KEYS object
+    const currentKey = API_KEYS.main;
+    $('#aiKey').value = currentKey; 
     $('#aiModel').value=load('mxq_ai_model')||'gemini-2.0-flash'; 
     $('#aiModal').classList.add('show'); 
     
@@ -2409,7 +2410,21 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
       updateTokenProgress();
     }, 50);
   };
-  $('#aiSave').onclick=()=>{ save('mxq_ai_key',$('#aiKey').value.trim()); save('mxq_ai_model',$('#aiModel').value.trim()); $('#aiModal').classList.remove('show'); toast('AI settings saved'); aiStatus(); };
+  $('#aiSave').onclick=()=>{ 
+    // Update the API_KEYS object with the new key
+    const newKey = $('#aiKey').value.trim();
+    if(newKey && newKey.length > 10) {
+      API_KEYS.main = newKey;
+      save('mxq_api_key_main', newKey);
+      toast('API key saved successfully!');
+    } else {
+      toast('Please enter a valid API key');
+      return;
+    }
+    save('mxq_ai_model',$('#aiModel').value.trim()); 
+    $('#aiModal').classList.remove('show'); 
+    aiStatus(); 
+  };
   $('#aiClose').onclick=()=>$('#aiModal').classList.remove('show');
   
   // Reset filters button
