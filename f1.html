@@ -1,0 +1,979 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MX Daily Check-In — Lexend</title>
+
+<!-- Lexend font -->
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;900&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#0a0f1e; --panel:#0f172a; --ink:#e8eef7; --muted:#94a3b8; --stroke:#1e293b;
+    --brand1:#22d3ee; --brand2:#a78bfa; --ok:#34d399; --warn:#fbbf24;
+    --p-blue:#e8f3ff;   --p-blue-b:#93c5fd;
+    --p-red:#ffe7ea;    --p-red-b:#fda4af;
+    --p-green:#ecfff4;  --p-green-b:#86efac;
+    --p-purple:#f3e8ff; --p-purple-b:#c4b5fd;
+    --p-yellow:#fff7cc; --p-yellow-b:#fde68a;
+  }
+  html,body{height:100%;margin:0;background:radial-gradient(1200px 900px at 10% 0%, #0d1634, #0a0f1e 60%);color:var(--ink);font-family:'Lexend', ui-sans-serif, system-ui, Segoe UI, Roboto, Arial, sans-serif; overflow:hidden}
+  * { user-select:none; -webkit-user-select:none; -ms-user-select:none; }
+  input, textarea, select, button { user-select:text; -webkit-user-select:text; -ms-user-select:text; }
+
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:10px;height:100vh;padding:12px;box-sizing:border-box}
+
+  /* Top bar */
+  .topbar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center; min-height:48px}
+  .stats{display:flex;gap:8px;flex-wrap:wrap}
+  .stat{background:#0b1226;border:1px solid var(--stroke);border-radius:12px;padding:6px 10px;font-weight:700}
+  .actions{display:flex;gap:10px;align-items:center}
+  .topbtn{
+    background:#0b1226; border:1px solid var(--stroke); color:var(--ink);
+    padding:10px 14px; border-radius:14px; font-weight:900; font-size:16px; cursor:pointer;
+    box-shadow:0 10px 20px rgba(0,0,0,.35); transition:.12s transform,.12s box-shadow; height:42px; display:inline-flex; align-items:center
+  }
+  .topbtn:active{ transform:translateY(1px) scale(.98); box-shadow:0 6px 12px rgba(0,0,0,.35) }
+  #randomBtn{
+    background:radial-gradient(120% 120% at 10% 0%, var(--brand2), var(--brand1));
+    color:#06121a;border:none;
+  }
+
+  /* Question row */
+  .questionRow{display:flex;justify-content:center}
+  .question{
+    text-align:center;
+    font-size:clamp(26px,5vw,58px);
+    font-weight:900; letter-spacing:.2px; padding:10px 14px;
+    background:rgba(15,23,42,.6); border:1px solid var(--stroke); border-radius:14px;
+    width:min(1200px, 100%);
+  }
+
+  .stage{position:relative; display:grid; grid-template-rows:auto auto auto; gap:10px; min-height:0}
+  #badgeLayer{position:absolute; inset:0; z-index:20; pointer-events:none}
+  #badgeLayer .badge{pointer-events:auto}
+
+  .zones{display:grid; gap:10px; grid-auto-rows:minmax(200px,1fr)}
+  .zone{position:relative;border-radius:18px;border:2px dashed #94a3b8;padding:10px;box-shadow:0 12px 36px rgba(0,0,0,.18) inset}
+  .zone h3{margin:0 0 6px 0;font-size:clamp(16px,2vw,24px);font-weight:900;color:#0b1020;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+  .blue{background:var(--p-blue); border-color:var(--p-blue-b)}
+  .red{background:var(--p-red); border-color:var(--p-red-b)}
+  .green{background:var(--p-green); border-color:var(--p-green-b)}
+  .purple{background:var(--p-purple); border-color:var(--p-purple-b)}
+  .yellow{background:var(--p-yellow); border-color:var(--p-yellow-b)}
+
+  /* Parking (tight for one-screen fit) */
+  .parking{background:#0b1226;border-radius:16px;border:1px solid var(--stroke);padding:10px;min-height:260px; position:relative}
+  #parkingPad{position:relative;min-height:300px; border:1px dashed #334155; border-radius:10px}
+
+  /* Overlay for parking label (above badges, no pointer events) */
+  #overlay{position:absolute; inset:0; z-index:40; pointer-events:none}
+  #parkingLabel{
+    position:absolute; top:14px; right:16px;
+    background:rgba(2,6,23,.8); border:1px solid var(--stroke);
+    color:#cbd5e1; padding:6px 10px; border-radius:10px; font-weight:900; font-size:14px;
+    box-shadow:0 8px 18px rgba(0,0,0,.35)
+  }
+
+  /* Steps (single line) */
+  .stepsRow{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:6px 10px; height:42px;
+    background:#0b1226; border:1px solid var(--stroke); border-radius:12px;
+    white-space:nowrap; overflow:hidden
+  }
+  .stepPill{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+    font-weight:900; font-size:14px; background:#0f172a; border:1px solid #1f2937
+  }
+
+  /* Badges */
+  .badge{position:absolute;touch-action:none;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-weight:800;font-size:clamp(14px,1.8vw,20px);color:#0b1226;background:linear-gradient(180deg,#f8fafc,#e2e8f0);box-shadow:0 10px 22px rgba(0,0,0,.35);border:2px solid #0f172a;transition:top .25s cubic-bezier(.34,1.56,.64,1), left .25s cubic-bezier(.34,1.56,.64,1)}
+  .badge.teacher{ background:linear-gradient(180deg,#fff7d6,#fde68a); border-color:#b45309 }
+  .badge[data-absent="true"]{background:linear-gradient(180deg,#ffe4e6,#fecaca)}
+  .badge.spinning{outline:4px solid var(--warn)}
+  .badge.winner{outline:6px solid var(--ok)}
+  .badge.pickedHidden{opacity:0; pointer-events:none; transition:opacity .2s}
+
+  /* Modals / sheets */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+  .modal.show{display:flex}
+  .sheet{width:min(1100px,95vw);max-height:90vh;overflow:auto;background:#0b1226;border:1px solid var(--stroke);border-radius:18px;padding:18px;box-shadow:0 22px 64px rgba(0,0,0,.5)}
+  .sheet h2{margin:0 0 10px}
+  .sheet section{border:1px solid #1f2937;border-radius:14px;padding:12px;margin:10px 0;background:#0c1428}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .sheet input,.sheet select,.sheet textarea, .sheet button{
+    font-size:16px;border-radius:12px;border:1px solid #334155;background:#0b1226;color:var(--ink);padding:10px 12px;transition:.12s transform,.12s box-shadow
+  }
+  .sheet button{box-shadow:0 8px 18px rgba(0,0,0,.35)}
+  .sheet button:active{transform:translateY(1px) scale(.98); box-shadow:0 6px 12px rgba(0,0,0,.35)}
+  .answers-grid{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .answers-grid .a{display:flex;gap:8px;align-items:center}
+  .answers-grid .lbl{width:110px; font-weight:800; text-align:right; opacity:.9}
+  .answers-grid input{flex:1}
+
+  .toast{position:fixed;bottom:16px;left:16px;background:#0b1226;color:var(--ink);border:1px solid var(--stroke);border-radius:12px;padding:10px 14px;opacity:0;transform:translateY(8px);transition:.25s;z-index:120}
+  .toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="stats">
+      <span class="stat" id="statPlaced">Placed: 0</span>
+      <span class="stat" id="statAbsent">Absent (not placed): 0</span>
+    </div>
+    <div class="actions">
+      <button class="topbtn" id="openSettings">⚙️ Settings</button>
+      <button class="topbtn" id="quickReset">Reset</button>
+      <button class="topbtn" id="randomBtn">🎡 Pick Random Student</button>
+    </div>
+  </div>
+
+  <!-- Question row -->
+  <div class="questionRow">
+    <div class="question" id="question">Loading question…</div>
+  </div>
+
+  <!-- Zones + Parking -->
+  <div class="stage" id="stage">
+    <div class="zones" id="zones"></div>
+
+    <div class="parking" id="parking">
+      <div id="parkingPad"></div>
+    </div>
+
+    <!-- Steps bar (single line) -->
+    <div class="stepsRow">
+      <div class="stepPill">📖 READ</div>
+      <div class="stepPill">🤔 THINK</div>
+      <div class="stepPill">👥 DISCUSS</div>
+      <div class="stepPill">➡️ MOVE</div>
+      <div class="stepPill">🗣️ EXPLAIN</div>
+    </div>
+
+    <!-- Badges layer -->
+    <div id="badgeLayer"></div>
+    <!-- Overlay layer for parking label (above badges, no pointer events) -->
+    <div id="overlay"><div id="parkingLabel">🅿️ Parking Lot / Absent</div></div>
+  </div>
+
+</div>
+
+<!-- SETTINGS -->
+<div class="modal" id="settingsModal"><div class="sheet">
+  <h2>⚙️ Settings</h2>
+
+  <!-- Row 1: Question -->
+  <section>
+    <div class="row" style="gap:12px">
+      <label style="min-width:120px;font-weight:800">Question</label>
+      <input id="qInput" placeholder="Daily question (or generate with AI)" style="flex:1" />
+    </div>
+  </section>
+
+  <!-- Row 2: Responses dropdown -->
+  <section>
+    <div class="row" style="gap:12px">
+      <label style="min-width:120px;font-weight:800">Responses</label>
+      <select id="choiceCount">
+        <option value="2">2 choices</option>
+        <option value="3">3 choices</option>
+        <option value="4" selected>4 choices</option>
+        <option value="open">Open (1 bin)</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Row 3: Responses Section -->
+  <section id="answersWrap">
+    <div class="answers-grid">
+      <div class="a"><div class="lbl">Answer A</div><input id="a1" value="Work alone"></div>
+      <div class="a"><div class="lbl">Answer B</div><input id="a2" value="Work with a partner"></div>
+      <div class="a"><div class="lbl">Answer C</div><input id="a3" value="Ask a teacher"></div>
+      <div class="a"><div class="lbl">Answer D</div><input id="a4" value="Try a new strategy"></div>
+    </div>
+  </section>
+
+  <!-- Row 4+: AI tools -->
+  <section>
+    <div class="row" style="gap:12px">
+      <label style="min-width:120px;font-weight:800">Keywords</label>
+      <input id="keywordInput" placeholder="e.g., friendship, patterns, weather, habitats" style="flex:1" />
+      <label style="min-width:90px;font-weight:800">Grade</label>
+      <select id="gradeInput">
+        <option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
+      </select>
+      <label style="min-width:110px;font-weight:800">Subject</label>
+      <select id="subjectInput">
+        <option selected>General</option>
+        <option>Math</option>
+        <option>Language</option>
+        <option>Science</option>
+        <option>Social Studies</option>
+        <option>Drama</option>
+        <option>Dance</option>
+        <option>Visual Arts</option>
+        <option>Music</option>
+        <option>Phys-Ed</option>
+      </select>
+      <label style="min-width:130px;font-weight:800">Bloom’s Level</label>
+      <select id="bloomsInput">
+        <option>Remember</option>
+        <option>Understand</option>
+        <option>Apply</option>
+        <option>Analyze</option>
+        <option selected>Evaluate</option>
+        <option>Create</option>
+      </select>
+    </div>
+    <div class="row" style="gap:12px">
+      <button id="genBtn">✨ Generate with AI</button>
+      <button id="aiBtn">🤖 AI Settings</button>
+      <span id="aiStatusMain" style="font-weight:700;color:#94a3b8">AI: not checked</span>
+    </div>
+  </section>
+
+  <!-- Last Row: other options incl. Mood Checker + Weekend Reflection -->
+  <section>
+    <div class="row" style="gap:12px; flex-wrap:wrap">
+      <button id="openRoster">👥 Edit Roster</button>
+      <button id="saveBtn">💾 Save Layout</button>
+      <button id="loadBtn">⭳ Load Layout</button>
+      <button id="allToParkingBtn">🅿️ All to Parking</button>
+      <button id="resetWeekBtn">🗓️ Reset Week</button>
+      <button id="presetMood">🟦🟥🟨🟩 Mood Checker</button>
+      <button id="presetWeekend">🌤️ Weekend Reflection</button>
+    </div>
+  </section>
+
+  <div class="row" style="justify-content:flex-end;margin-top:8px">
+    <button id="applySettings" style="font-weight:900;padding:12px 18px">✅ OK</button>
+    <button id="closeSettings" style="padding:12px 18px">Close</button>
+  </div>
+</div></div>
+
+<!-- Roster Modal -->
+<div class="modal" id="rosterModal">
+  <div class="sheet">
+    <h2>👥 Edit roster (students only)</h2>
+    <textarea id="rosterInput" style="width:100%;min-height:260px">Abdallah
+Robyn
+Layla
+Keerthy
+Hakim
+Melania
+Halo
+Abbas
+Penelope
+Harnoor
+Sean
+Su
+Caleb
+Elena
+Selena
+Anisha
+Iris
+Jazmine
+Alayna
+Shreyansh</textarea>
+    <div class="row">
+      <button id="applyRoster">Apply roster</button>
+      <button id="closeRoster">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Config Modal -->
+<div class="modal" id="aiModal"><div class="sheet">
+  <h2>🤖 AI Question Generator (Gemini)</h2>
+  <p>Paste your Google AI Studio key (saved locally in your browser).</p>
+  <div class="row">
+    <label style="min-width:140px">API Key</label>
+    <input id="aiKey" placeholder="AIza..." style="flex:1" />
+  </div>
+  <div class="row">
+    <label style="min-width:140px">Model</label>
+    <input id="aiModel" placeholder="gemini-1.5-flash" style="flex:1" />
+  </div>
+  <div class="row">
+    <span id="aiStatusDetail" style="flex:1;font-weight:700;color:#94a3b8">Status: not checked</span>
+    <button id="aiTest">Test Connection</button>
+  </div>
+  <div style="height:10px"></div>
+  <button id="aiSave">Save</button>
+  <button id="aiClose">Close</button>
+</div></div>
+
+<!-- Winner overlay -->
+<div class="modal" id="winnerModal"><div class="sheet" style="text-align:center">
+  <h2 id="winnerText" style="font-size:clamp(28px,4.8vw,60px); margin:0 0 8px"></h2>
+  <div id="winnerSub" style="font-size:clamp(18px,2.4vw,30px); opacity:.9"></div>
+  <button id="closeWinner">OK</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  /* ====================== CONFIG (Gemini default) ====================== */
+  const GEMINI_KEY_DEFAULT = ""; // optional: hardcode "AIza..."
+  const GEMINI_MODEL_DEFAULT = "gemini-1.5-flash";
+
+  /* ====================== UTILITIES ====================== */
+  const $  = s=>document.querySelector(s);
+  const $$ = s=>Array.from(document.querySelectorAll(s));
+  const raf = ()=>new Promise(r=>requestAnimationFrame(()=>r()));
+  function showToast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 1700); }
+  function rect(el){ return el.getBoundingClientRect(); }
+  function center(el){ const r=rect(el); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
+  function within(p, el){ const r=rect(el); return p.x>=r.left && p.x<=r.right && p.y>=r.top && p.y<=r.bottom; }
+  function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+  function load(k,f){ try{ const v=JSON.parse(localStorage.getItem(k)); return v??f; }catch{return f;} }
+  function stageOffset(){ const r=rect($('#stage')); return {x:r.left, y:r.top}; }
+
+  /* Toast + Winner helpers */
+  function setWinner(name, answer){
+    $('#winnerText').textContent = name;
+    $('#winnerSub').textContent  = `please explain your answer: ${answer}`;
+    $('#winnerModal').classList.add('show');
+  }
+  $('#closeWinner').onclick = ()=> $('#winnerModal').classList.remove('show');
+
+  /* ====================== EMOJI (no duplicates per set) ====================== */
+  const EMOJI_POOL = ["🤝","🎲","📖","🔄","🎨","☔","❄️","☀️","👫","🏃","🎵","🎭","🍎","🌎","🧩","✏️","🖌️","⚽","🎶","🦋","🚀","🪴","🕊️","🔍","🧠","💡","🛠️","🗺️","🧪","📐","🧮","🗣️","📝"];
+  const KEYWORD_HINTS = [
+    [/read|story|book|text/i,"📖"],
+    [/friend|kind|include|help/i,"🤝"],
+    [/music|song|melody|rhythm/i,"🎵"],
+    [/game|play|rules/i,"🎲"],
+    [/art|draw|paint|colour|color/i,"🎨"],
+    [/move|exercise|run|sport|team/i,"🏃"],
+    [/pattern|sequence|model/i,"🔄"],
+    [/drama|act|role/i,"🎭"],
+    [/weather|sun|rain|snow|hot|cold/i,"☀️"],
+    [/science|test|experiment|observe/i,"🧪"],
+    [/map|timeline|global|community/i,"🗺️"],
+    [/math|count|add|subtract|shape|measure/i,"🧮"],
+  ];
+  function addEmojisUnique(rawChoices){
+    const choices = rawChoices.slice();
+    // “Other” last stays 📝 and unchanged
+    const otherIdx = choices.findIndex(c=>/other/i.test(c));
+    const used = new Set(otherIdx>=0 ? ["📝"] : []);
+    const withEmoji = [];
+    for(let i=0;i<choices.length;i++){
+      const c = (choices[i]||"").trim();
+      if(i===otherIdx){ withEmoji.push("📝 "+c.replace(/^📝\s*/i,'')); continue; }
+      // keyword pass
+      let emo = "";
+      for(const [re, e] of KEYWORD_HINTS){
+        if(re.test(c) && !used.has(e)){ emo = e; break; }
+      }
+      // fallback unique pull
+      if(!emo){
+        emo = EMOJI_POOL.find(e=>!used.has(e) && e!=="📝") || "🎯";
+      }
+      used.add(emo);
+      // strip any leading existing emoji to avoid doubles
+      const stripped = c.replace(/^[\p{Emoji}\u200d\ufe0f\u2764\ufe0f\*]+/u,'').trim();
+      withEmoji.push(`${emo} ${stripped}`);
+    }
+    return withEmoji;
+  }
+
+  function weekKey(d=new Date()){
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = date.getUTCDay()||7;
+    date.setUTCDate(date.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+    const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+    return date.getUTCFullYear() + '-W' + String(weekNo).padStart(2,'0');
+  }
+
+  /* ====================== STATE ====================== */
+  const TEACHER_NAME = "Mr. Cushman";
+  const OPEN_LABEL = "🗣️ I’ve got my answer and I’m ready to explain why.";
+  const moodPreset = Object.freeze({
+    q: 'What Zone are you in??',
+    choices: [ '😢 Blue Zone', '😡 Red Zone', '😊 Yellow Zone', '🙂 Green Zone' ],
+    colors:  [ 'blue', 'red', 'yellow', 'green' ]
+  });
+  const weekendPreset = Object.freeze({
+    q: 'What was the most interesting part of your weekend?',
+    choices: [
+      'Something new I did or learned',
+      'Doing one of my favourite things',
+      'Spending time with someone I love',
+      'Something else'
+    ],
+    colors: ['blue','red','green','purple']
+  });
+
+  let roster = [];
+  let badges = [];
+  let drag = null;
+  let pickedSet = new Set();
+
+  /* ====================== ZONES & QUESTION ====================== */
+  const zonesEl = $('#zones'), questionEl = $('#question'), badgeLayer = $('#badgeLayer');
+  function setGridColumns(n){ zonesEl.style.gridTemplateColumns = `repeat(${n}, minmax(0, 1fr))`; }
+  function buildZones(choices, colors){
+    zonesEl.innerHTML = '';
+    setGridColumns(choices.length);
+    for(let i=0;i<choices.length;i++){
+      const z = document.createElement('div');
+      z.className = 'zone ' + (colors?.[i] || ['blue','red','green','purple'][i%4]);
+      z.dataset.zone = i;
+      const h = document.createElement('h3'); h.textContent = choices[i];
+      z.appendChild(h); zonesEl.appendChild(z);
+    }
+  }
+  function relabelBadges(){
+    const zEls = $$('.zone');
+    badges.forEach(b=>{
+      const c=center(b); let inAny=false;
+      for(const z of zEls){ if(within(c,z)){ b.dataset.zone=z.dataset.zone; inAny=true; break; } }
+      if(!inAny) b.dataset.zone='parking';
+      b.dataset.lastX = b.style.left; b.dataset.lastY = b.style.top;
+    });
+  }
+
+  /* choices: add emojis uniquely */
+  function applyChoicesFrom(mode, lines){
+    let choices = [];
+    if(mode === 'open'){
+      choices = [OPEN_LABEL];
+    } else {
+      const count = Math.max(2, Math.min(4, parseInt(mode,10) || 4));
+      choices = lines.slice(0, count);
+      if(count>=3){
+        const haveOther = choices.some(c=>/other/i.test(c));
+        if(!haveOther) choices = choices.slice(0, count-1).concat('Other (explain)');
+        else choices = choices.filter(c=>!/other/i.test(c)).concat(choices.find(c=>/other/i.test(c)));
+      }
+    }
+    // add emojis with uniqueness
+    choices = addEmojisUnique(choices);
+    const colors = choices.map((_,i)=> (i<4? ['blue','red','green','purple'][i] : ['yellow','blue','red','green'][i%4]));
+    buildZones(choices, colors);
+    const saved = load('mxq_choices_v15') || {};
+    save('mxq_choices_v15', {q:saved.q || questionEl.textContent, choices, colors, mode});
+    relabelBadges(); updateStats();
+  }
+
+  /* ====================== PARKING LABEL OVERLAY ====================== */
+  function positionParkingLabel(){
+    const pad = $('#parkingPad'); const tag = $('#parkingLabel'); const overlay = $('#overlay'); if(!pad||!tag||!overlay) return;
+    const r = rect(pad); const s = rect($('#stage'));
+    tag.style.left = (r.right - s.left - tag.offsetWidth - 16) + 'px';
+    tag.style.top  = (r.top - s.top + 14) + 'px';
+  }
+
+  /* ====================== BADGES / ROSTER ====================== */
+  function initialParkingCoords(){
+    const pad = $('#parkingPad');
+    const r = rect(pad), sOff = stageOffset();
+    const labelPad = 48; // reserve space at top for the Parking label pill
+    const left0 = r.left - sOff.x + 20;
+    const top0  = r.top  - sOff.y + 14 + labelPad; // push grid below label
+    return {left0, top0, usableW: r.width - 40};
+  }
+
+  function distributeInParking(resetAll=false){
+    const r = rect($('#parkingPad')), sOff = stageOffset();
+    const labelPad = 48;
+    const left0 = r.left - sOff.x + 20;
+    const top0  = r.top  - sOff.y + 14 + labelPad;
+    const usableW = r.width - 40;
+    const badgeW = 140, badgeH = 64;
+    const cols = Math.max(4, Math.floor(usableW / badgeW));
+    let i = 0;
+    badges.forEach(b=>{
+      if(b.dataset.ignore==='true') return;
+      if(!resetAll && b.dataset.zone!=='parking') return;
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = left0 + col*badgeW;
+      const y = top0  + row*badgeH;
+      b.style.left = x+'px'; b.style.top = y+'px';
+      b.dataset.zone='parking';
+      b.dataset.lastX=b.style.left; b.dataset.lastY=b.style.top;
+      i++;
+    });
+    const t = badges.find(b=>b.dataset.ignore==='true');
+    if(t){
+      t.style.left = (left0) + 'px';
+      t.style.top  = (r.top - sOff.y + 14) + 'px';
+      t.dataset.zone='parking';
+      t.dataset.lastX=t.style.left; t.dataset.lastY=t.style.top;
+    }
+  }
+
+  function applyRoster(){
+    const txt = $('#rosterInput').value;
+    roster = txt.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    save('mxq_roster', roster);
+    makeBadges(); showToast('Roster applied');
+  }
+
+  function makeBadges(){
+    badgeLayer.innerHTML = '';
+    badges = [];
+
+    // Pre-calc starting parking area and place all badges INSIDE it immediately
+    const coords = initialParkingCoords();
+    const badgeW = 140, badgeH = 64;
+    const cols = Math.max(4, Math.floor(coords.usableW / badgeW));
+    let i = 0;
+
+    // Teacher
+    const t = document.createElement('div');
+    t.className = 'badge teacher';
+    t.textContent = TEACHER_NAME;
+    t.setAttribute('draggable','false'); t.ondragstart = ()=>false;
+    badgeLayer.appendChild(t);
+    t.dataset.zone = 'parking'; t.dataset.ignore = 'true';
+    t.style.left = (coords.left0)+'px';
+    t.style.top  = (coords.top0 - 56)+'px'; // above student grid but inside parking area
+    t.dataset.lastX=t.style.left; t.dataset.lastY=t.style.top;
+    enableDrag(t); badges.push(t);
+
+    // Students — place each directly into parking grid at creation
+    roster.forEach((name)=>{
+      const el = document.createElement('div'); el.className = 'badge';
+      el.textContent = name; el.setAttribute('draggable','false'); el.ondragstart = ()=>false;
+      const col = i % cols, row = Math.floor(i / cols);
+      el.style.left = (coords.left0 + col*badgeW) + 'px';
+      el.style.top  = (coords.top0  + row*badgeH) + 'px';
+      el.dataset.lastX = el.style.left; el.dataset.lastY = el.style.top;
+      el.dataset.zone='parking';
+      badgeLayer.appendChild(el);
+      enableDrag(el); badges.push(el);
+      i++;
+    });
+
+    updateStats();
+  }
+
+  function updateStats(){
+    const isStudent = b => b.dataset.ignore !== 'true';
+    const placed = badges.filter(b=> isStudent(b) && b.dataset.zone!=='parking' && !b.classList.contains('pickedHidden'));
+    const totalStudents = badges.filter(isStudent).length;
+    const hidden = badges.filter(b=>isStudent(b)&&b.classList.contains('pickedHidden')).length;
+    const absent = totalStudents - placed.length - hidden;
+    $('#statPlaced').textContent = 'Placed: '+placed.length;
+    $('#statAbsent').textContent = 'Absent (not placed): '+absent;
+    badges.forEach(b=>{ b.dataset.absent = (b.dataset.zone==='parking' && isStudent(b) && !b.classList.contains('pickedHidden')); });
+  }
+
+  /* ====================== DRAG / BOUNCE BACK ====================== */
+  function enableDrag(el){
+    el.addEventListener('pointerdown', (e)=>{
+      e.preventDefault(); el.setPointerCapture(e.pointerId);
+      const r=el.getBoundingClientRect();
+      drag={el,dx:e.clientX-r.left,dy:e.clientY-r.top};
+    });
+    el.addEventListener('pointermove', (e)=>{
+      if(!drag||drag.el!==el) return;
+      const sOff=stageOffset();
+      const x=e.clientX-sOff.x-drag.dx; const y=e.clientY-sOff.y-drag.dy;
+      el.style.left=x+"px"; el.style.top=y+"px";
+    });
+    el.addEventListener('pointerup', ()=>{
+      if(!drag||drag.el!==el) return; settle(el); drag=null;
+    });
+  }
+  function settle(el){
+    const pt = center(el);
+    const targets = [...$$('.zone'), $('#parkingPad')];
+    let landed = false;
+    for(const target of targets){
+      if(within(pt, target)){
+        el.dataset.zone = target.dataset.zone || 'parking';
+        el.dataset.lastX = el.style.left;
+        el.dataset.lastY = el.style.top;
+        landed = true; break;
+      }
+    }
+    if(!landed){
+      el.style.left = el.dataset.lastX || el.style.left;
+      el.style.top  = el.dataset.lastY || el.style.top;
+    }
+    updateStats();
+  }
+
+  function allToParking(){
+    distributeInParking(true);
+    updateStats();
+  }
+
+  /* ====================== WEEKLY MEMORY ====================== */
+  function persistPicked(){ save('mxq_picked', Array.from(pickedSet)); }
+  function ensureWeek(){
+    const cur = weekKey();
+    const stored = load('mxq_week_key');
+    if(stored !== cur){ save('mxq_week_key', cur); save('mxq_picked', []); pickedSet.clear(); }
+    else { pickedSet = new Set(load('mxq_picked', [])); }
+  }
+  function resetWeekOnly(){
+    pickedSet.clear(); persistPicked();
+    badges.forEach(b=> b.classList.remove('pickedHidden'));
+    updateStats(); showToast('Weekly picks cleared and hidden names revealed');
+  }
+
+  /* ====================== RANDOMIZER ====================== */
+  function randomPick(){
+    const placed = badges.filter(b=> b.dataset.zone!=='parking' && b.dataset.ignore!=='true' && !b.classList.contains('pickedHidden'));
+    let pool = placed.filter(b=> !pickedSet.has(b.textContent.trim()));
+    if(pool.length===0){
+      pickedSet.clear(); persistPicked();
+      pool = placed.slice();
+      if(pool.length===0){ showToast('No placed names yet.'); return; }
+      showToast('New round this week!');
+    }
+    pool.forEach(b=>b.classList.remove('spinning','winner'));
+    const roundsBase = Math.max(24, 6 + pool.length*2);
+    const rounds = Math.floor(roundsBase * 1.5);
+    const baseDelay=40; let i=0;
+
+    function tick(){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(), g=ctx.createGain(); o.type='square'; o.frequency.value=800+Math.random()*200; g.gain.setValueAtTime(0.08, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.08); o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.09); setTimeout(()=>ctx.close(),120);}catch(e){} }
+    function win(){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(), g=ctx.createGain(); o.type='triangle'; o.frequency.value=620; g.gain.setValueAtTime(0.001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.5); o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.55); setTimeout(()=>ctx.close(),600);}catch(e){} }
+
+    function step(){
+      pool.forEach(b=>b.classList.remove('spinning'));
+      const idx=i%pool.length; pool[idx].classList.add('spinning'); tick(); i++;
+      const p=i/rounds; const d=baseDelay + p*p*260;
+      if(i<rounds){ setTimeout(step,d); }
+      else {
+        pool.forEach(b=>b.classList.remove('spinning','winner'));
+        const winner=pool[(i-1)%pool.length]; winner.classList.add('winner'); win();
+        const z=winner.dataset.zone;
+        let answer=''; const zEl=document.querySelector(`.zone[data-zone="${z}"] h3`); if(zEl) answer=zEl.textContent.trim();
+        const name=winner.textContent.trim(); pickedSet.add(name); persistPicked();
+        setTimeout(()=>{ winner.classList.add('pickedHidden'); updateStats(); }, 120);
+        setWinner(name, answer || 'your choice');
+      }
+    }
+    step();
+  }
+
+  /* ====================== AI (Gemini) ====================== */
+  function getGeminiKey(){ return (load('mxq_ai_key') || GEMINI_KEY_DEFAULT || '').trim(); }
+  function getGeminiModel(){ return (load('mxq_ai_model') || GEMINI_MODEL_DEFAULT || 'gemini-1.5-flash').trim(); }
+
+  function bloomsVerb(level){
+    switch((level||'Apply').toLowerCase()){
+      case 'remember':  return 'recall, identify';
+      case 'understand':return 'explain, describe';
+      case 'apply':     return 'use, demonstrate';
+      case 'analyze':   return 'compare, categorize, find patterns';
+      case 'evaluate':  return 'justify, critique, choose with reasons';
+      case 'create':    return 'design, plan, invent';
+      default:          return 'use, demonstrate';
+    }
+  }
+
+  function buildOntarioPrompt({count, kw, grade, subject, blooms}){
+    const s = subject||'General';
+    const g = grade||'2';
+    const keywords = kw||'none';
+    const verbs = bloomsVerb(blooms);
+    return `
+You are generating a Grade ${g} classroom check-in aligned with Ontario big ideas and learning skills.
+Create ONE short, student-friendly question that works in any situation and invites a brief explanation.
+- Subject focus: ${s}. If "General", make it cross-curricular (community, learning strategies).
+- Keywords: ${keywords}.
+- Bloom’s emphasis: ${blooms} (verbs like: ${verbs}). Keep it age-appropriate.
+- The question must be ONE sentence, present-tense, and generalizable (e.g., "How can you show you understand a story we just read?").
+- Then provide exactly ${count} multiple-choice options that MATCH the question and are broad strategy categories (not specific facts).
+- If ${count} is 3 or 4, the LAST option MUST be "📝 Other (explain)".
+Return ONLY strict JSON:
+{"question":"...","choices":["...","...","...","..."]}
+`.trim();
+  }
+
+  function parseJSONLenient(txt){
+    try{ return JSON.parse(txt); }catch(e){}
+    const m = txt && txt.match(/\{[\s\S]*\}/); if(m){ try{ return JSON.parse(m[0]); }catch(e){} }
+    return null;
+  }
+
+  async function geminiGenerateQnA(count=4, kw="", grade="2", subject="General", blooms="Evaluate"){
+    const key = getGeminiKey();
+    if(!key){ throw new Error('No Gemini API key set. Click AI Settings and paste your key.'); }
+    const model = getGeminiModel();
+    const prompt = buildOntarioPrompt({count, kw, grade, subject, blooms});
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ contents: [{ role:"user", parts:[{ text: prompt }]}] })
+    });
+    if(!res.ok){
+      const txt = await res.text();
+      throw new Error(`Gemini HTTP ${res.status}: ${txt}`);
+    }
+    const data = await res.json();
+    const text = (data?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join(' ').trim();
+    const obj = parseJSONLenient(text);
+    if(!obj || typeof obj.question!=='string' || !Array.isArray(obj.choices) || obj.choices.length!==count){
+      throw new Error('Bad AI JSON shape');
+    }
+    // make sure Other last for 3-4 choices
+    if(count>=3){
+      const hasOther = obj.choices.some(c=>/other/i.test(c));
+      if(!hasOther) obj.choices = obj.choices.slice(0, count-1).concat('Other (explain)');
+      else obj.choices = obj.choices.filter(c=>!(/other/i.test(c))).concat(obj.choices.find(c=>/other/i.test(c)));
+    }
+    // add emojis with uniqueness
+    obj.choices = addEmojisUnique(obj.choices);
+    return obj;
+  }
+
+  function offlineBank(count, subject){
+    const banks = {
+      General: {
+        q: ['What is one way you can show your thinking clearly? Explain why you chose it.','How could you help our class learn well today? Explain your choice.'],
+        a: [['Estimate','Use a model','Ask a question','Other (explain)']]
+      },
+      Math: {
+        q: ['How would you start a math problem like this? Explain your choice.','How could you check your math thinking? Explain.'],
+        a: [['Estimate','Look for a pattern','Draw a model','Other (explain)']]
+      },
+      Language: {
+        q: ['How can you show you understand a story we just read? Explain.','What is a way to support your idea in writing? Explain.'],
+        a: [['Use a detail from the text','Use your own example','Ask a question','Other (explain)']]
+      },
+      Science: {
+        q: ['How could you explore a science idea safely? Explain your choice.','What could be your first step to investigate something? Explain.'],
+        a: [['Observe','Make a prediction','Test an idea','Other (explain)']]
+      },
+      'Social Studies': {
+        q: ['How can you learn about a community idea fairly? Explain.','How could you compare past and present? Explain.'],
+        a: [['Consider different viewpoints','Use a map or timeline','Connect to our community','Other (explain)']]
+      },
+      Drama: {
+        q: ['How could you show a feeling on stage? Explain your choice.','What could make your scene clearer? Explain.'],
+        a: [['Change voice or volume','Use body/space','Add a prop or gesture','Other (explain)']]
+      },
+      Dance: {
+        q: ['How could you show an idea with movement? Explain.','How can your group stay in sync? Explain.'],
+        a: [['Use levels (high/low)','Repeat a pattern','Count the beat','Other (explain)']]
+      },
+      'Visual Arts': {
+        q: ['How could you create contrast in your art? Explain.','What could make your idea stand out? Explain.'],
+        a: [['Change colour or shade','Use line/texture','Plan with a quick sketch','Other (explain)']]
+      },
+      Music: {
+        q: ['How can you make a melody clearer? Explain.','How can you improve the rhythm? Explain.'],
+        a: [['Listen for balance','Count and clap first','Change volume (dynamics)','Other (explain)']]
+      },
+      'Phys-Ed': {
+        q: ['How can we play safely and fairly? Explain.','How can you include everyone in a game? Explain.'],
+        a: [['Use kind teamwork','Make space or pass','Set fair rules','Other (explain)']]
+      }
+    };
+    const bank = banks[subject] || banks.General;
+    const q = bank.q[Math.floor(Math.random()*bank.q.length)];
+    let arr = bank.a[0].slice(0, count);
+    if(count>=3){
+      const other = 'Other (explain)';
+      const haveOther = arr.some(c=>/other/i.test(c));
+      if(!haveOther) arr = arr.slice(0, count-1).concat(other);
+      else arr = arr.filter(c=>!/other/i.test(c)).concat(arr.find(c=>/other/i.test(c)));
+    }
+    return {question:q, choices:addEmojisUnique(arr)};
+  }
+
+  /* ====================== UI WIRING ====================== */
+  $('#randomBtn').onclick = randomPick;
+  $('#openSettings').onclick = openSettings;
+  $('#quickReset').onclick = ()=>{ allToParking(); showToast('All badges returned to Parking'); };
+
+  function openSettings(){
+    const saved = load('mxq_choices_v15');
+    $('#qInput').value = saved?.q || questionEl.textContent || '';
+    const mode = saved?.mode || '4';
+    $('#choiceCount').value = mode;
+    const currentChoices = saved?.choices || $$('.zone h3').map(h=>h.textContent.trim());
+    ['a1','a2','a3','a4'].forEach((id,idx)=> $('#'+id).value = (currentChoices[idx]?.replace(/^[^\w\d]+/,'')||'')); // strip emoji in form
+    $('#gradeInput').value = load('mxq_grade',"2");
+    $('#subjectInput').value = load('mxq_subject',"General");
+    $('#keywordInput').value = load('mxq_keywords',"");
+    $('#bloomsInput').value = load('mxq_blooms',"Evaluate");
+    toggleAnswerFields(mode);
+    $('#settingsModal').classList.add('show');
+    updateAIStatusLabels();
+  }
+  function toggleAnswerFields(mode){
+    const grid = $('.answers-grid');
+    grid.style.display = (mode==='open') ? 'none' : 'grid';
+    const show = n => $('#a'+n).parentElement.style.display='flex';
+    const hide = n => $('#a'+n).parentElement.style.display='none';
+    show(1); show(2); show(3); show(4);
+    if(mode==='2'){ hide(3); hide(4); }
+    if(mode==='3'){ show(3); hide(4); }
+    if(mode==='4'){ show(3); show(4); }
+  }
+  $('#choiceCount').onchange = (e)=> toggleAnswerFields(e.target.value);
+
+  // Enter key generates with AI when settings modal is open
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==="Enter" && $('#settingsModal')?.classList.contains('show')){
+      if(e.target && e.target.tagName === 'TEXTAREA') return; // future-proof
+      e.preventDefault();
+      $('#genBtn')?.click();
+    }
+  });
+
+  // Presets
+  $('#presetMood').onclick = ()=>{
+    questionEl.textContent = moodPreset.q;
+    buildZones(moodPreset.choices, moodPreset.colors);
+    save('mxq_choices_v15', {q:moodPreset.q, choices:moodPreset.choices, colors:moodPreset.colors, mode:'4'});
+    relabelBadges(); updateStats();
+    $('#settingsModal').classList.remove('show');
+  };
+  $('#presetWeekend').onclick = ()=>{
+    questionEl.textContent = weekendPreset.q;
+    const ch = addEmojisUnique(weekendPreset.choices);
+    buildZones(ch, weekendPreset.colors);
+    save('mxq_choices_v15', {q:weekendPreset.q, choices:ch, colors:weekendPreset.colors, mode:'4'});
+    relabelBadges(); updateStats();
+    $('#settingsModal').classList.remove('show');
+  };
+
+  $('#applySettings').onclick = ()=>{
+    const mode = $('#choiceCount').value;
+    const q = $('#qInput').value.trim() || 'Which choice fits you best right now? Explain why.';
+    let lines = [];
+    if(mode!=='open'){
+      lines = [$('#a1').value, $('#a2').value, $('#a3').value, $('#a4').value].map(s=>s.trim()).filter(Boolean);
+    }
+    questionEl.textContent = q;
+    applyChoicesFrom(mode, lines);
+    const saved = load('mxq_choices_v15')||{};
+    save('mxq_choices_v15', {...saved, q});
+    save('mxq_grade', $('#gradeInput').value);
+    save('mxq_subject', $('#subjectInput').value);
+    save('mxq_keywords', $('#keywordInput').value);
+    save('mxq_blooms', $('#bloomsInput').value);
+    $('#settingsModal').classList.remove('show');
+  };
+  $('#closeSettings').onclick = ()=>$('#settingsModal').classList.remove('show');
+
+  // AI modal
+  $('#aiBtn').onclick = ()=>{
+    $('#aiKey').value  = load('mxq_ai_key') || GEMINI_KEY_DEFAULT || '';
+    $('#aiModel').value = load('mxq_ai_model') || GEMINI_MODEL_DEFAULT || 'gemini-1.5-flash';
+    $('#aiModal').classList.add('show'); updateAIStatusLabels();
+  };
+  $('#aiSave').onclick = ()=>{
+    save('mxq_ai_key',  $('#aiKey').value.trim());
+    save('mxq_ai_model',$('#aiModel').value.trim());
+    $('#aiModal').classList.remove('show'); showToast('AI settings saved'); updateAIStatusLabels();
+  };
+  $('#aiClose').onclick = ()=>$('#aiModal').classList.remove('show');
+  $('#aiTest').onclick = async ()=>{ $('#aiStatusDetail').textContent='Status: testing…'; const ok=await testAIConnection(); updateAIStatusLabels(); showToast(ok?'AI connected':'AI not connected'); };
+
+  // Roster modal
+  $('#openRoster').onclick = ()=>$('#rosterModal').classList.add('show');
+  $('#closeRoster').onclick = ()=>$('#rosterModal').classList.remove('show');
+  $('#applyRoster').onclick = ()=>{ applyRoster(); $('#rosterModal').classList.remove('show'); };
+
+  // Layout controls
+  $('#saveBtn').onclick = ()=>{
+    const layout=badges.map(b=>({ name:b.textContent.trim(), left:b.style.left, top:b.style.top, zone:b.dataset.zone, hidden:b.classList.contains('pickedHidden'), ig:b.dataset.ignore==='true' }));
+    save('mxq_layout', layout); showToast('Layout saved');
+  };
+  $('#loadBtn').onclick = ()=>{
+    const layout=load('mxq_layout'); if(!layout){ showToast('No saved layout'); return; }
+    const map=new Map(layout.map(x=>[x.name,x]));
+    badges.forEach(b=>{
+      const rec=map.get(b.textContent.trim());
+      if(rec){ b.style.left=rec.left; b.style.top=rec.top; b.dataset.zone=rec.zone; b.dataset.lastX=rec.left; b.dataset.lastY=rec.top; b.classList.toggle('pickedHidden', !!rec.hidden); }
+    });
+    updateStats(); showToast('Layout loaded');
+  };
+  $('#allToParkingBtn').onclick = ()=>{ allToParking(); showToast('All badges returned to Parking'); };
+  $('#resetWeekBtn').onclick   = ()=> resetWeekOnly();
+
+  /* ====================== BOOT ====================== */
+  async function boot(){
+    ensureWeek();
+
+    // roster
+    const savedRoster = load('mxq_roster');
+    roster = savedRoster ? savedRoster : $('#rosterInput').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    makeBadges();  // create badges INSIDE parking by default
+
+    // Wait for layout & font, then force a clean spread (prevents stray positions on first paint)
+    await raf(); await raf();
+    positionParkingLabel();
+    allToParking();
+
+    // initial AI attempt, fallback to offline
+    const grade = load('mxq_grade','2');
+    const subject = load('mxq_subject','General');
+    const blooms = load('mxq_blooms','Evaluate');
+    try{
+      const qna = await getQnA(4, load('mxq_keywords',''), grade, subject, blooms);
+      questionEl.textContent = qna.question || 'Which choice fits you best right now? Explain why.';
+      applyChoicesFrom('4', qna.choices && qna.choices.length ? qna.choices : ['Estimate','Use a model','Ask a question','Other (explain)']);
+    }catch(e){
+      const qna = offlineBank(4, subject);
+      questionEl.textContent = qna.question;
+      applyChoicesFrom('4', qna.choices);
+    }
+    updateAIStatusLabels();
+
+    // keep parking spread and label pinned on resize & content shifts
+    let spreadTimer;
+    const ro = new ResizeObserver(()=>{ clearTimeout(spreadTimer); spreadTimer=setTimeout(()=>{ positionParkingLabel(); distributeInParking(false); }, 60); });
+    ro.observe($('#parkingPad'));
+    window.addEventListener('resize', ()=>{
+      clearTimeout(spreadTimer);
+      spreadTimer=setTimeout(()=>{ positionParkingLabel(); distributeInParking(false); }, 120);
+    });
+  }
+  boot();
+
+  /* ====================== AI STATUS & DISPATCH ====================== */
+  async function testAIConnection(){
+    try{
+      const r = await geminiGenerateQnA(2, 'test', '2', 'General', 'Evaluate');
+      const ok = !!(r && r.question && Array.isArray(r.choices) && r.choices.length===2);
+      save('mxq_ai_status',{ok, provider:'gemini', time:Date.now()});
+      return ok;
+    }catch(e){
+      save('mxq_ai_status',{ok:false, provider:'gemini', time:Date.now()});
+      return false;
+    }
+  }
+  function updateAIStatusLabels(){
+    const s = load('mxq_ai_status');
+    const main = $('#aiStatusMain'), det = $('#aiStatusDetail');
+    if(!s){ if(main) main.textContent='AI: not checked'; if(det) det.textContent='Status: not checked'; return; }
+    const t = new Date(s.time).toLocaleTimeString();
+    const msg = s.ok? `Connected ✅ (gemini)` : `Not connected ❌ (gemini)`;
+    if(main) main.textContent='AI: '+msg+` [${t}]`;
+    if(det) det.textContent='Status: '+msg+` (last check ${t})`;
+  }
+
+  async function getQnA(count, kw, grade, subject, blooms){
+    // prefer online if key, else offline
+    try{
+      if(getGeminiKey()) return await geminiGenerateQnA(count, kw, grade, subject, blooms);
+      throw new Error('No key');
+    }catch{
+      return offlineBank(count, subject);
+    }
+  }
+})();
+</script>
+</body>
+</html>

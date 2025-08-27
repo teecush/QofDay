@@ -1,0 +1,3325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MX Daily Check-In — Lexend</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f1e; --panel:#0f172a; --ink:#e8eef7; --muted:#94a3b8; --stroke:#1e293b;
+    --brand1:#22d3ee; --brand2:#a78bfa; --ok:#34d399; --warn:#fbbf24;
+    --p-blue:#e8f3ff; --p-blue-b:#93c5fd;
+    --p-red:#ffe7ea; --p-red-b:#fda4af;
+    --p-green:#ecfff4; --p-green-b:#86efac;
+    --p-purple:#f3e8ff; --p-purple-b:#c4b5fd;
+  }
+  html,body{height:100%;margin:0;background:radial-gradient(1200px 900px at 10% 0%, #0d1634, #0a0f1e 60%);color:var(--ink);font-family:'Lexend',system-ui,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden}
+  *{user-select:none} input,textarea,select,button{user-select:text}
+
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:0;height:100vh;padding:12px;box-sizing:border-box}
+
+  /* Top bar: 3 columns (stats | timer | actions) */
+  .topbar{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;min-height:48px}
+  .stats{display:flex;gap:8px;flex-wrap:wrap}
+  .stat{background:#0b1226;border:1px solid var(--stroke);border-radius:12px;padding:6px 10px;font-weight:700}
+
+  .actions{display:flex;gap:10px;align-items:center;justify-content:flex-end}
+  .topbtn{background:#0b1226;border:1px solid var(--stroke);color:var(--ink);padding:10px 14px;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 10px 20px rgba(0,0,0,.35);transition:.12s transform,.12s box-shadow;height:42px;display:inline-flex;align-items:center}
+  .topbtn:active{transform:translateY(1px) scale(.98);box-shadow:0 6px 12px rgba(0,0,0,.35)}
+  #randomBtn{background:radial-gradient(120% 120% at 10% 0%, var(--brand2), var(--brand1));color:#06121a;border:none}
+
+  /* Timer (center) */
+  .timerWrap{display:flex;align-items:center;justify-content:center;gap:8px}
+  .timerBox{display:flex;align-items:center;gap:8px;background:#0b1226;border:1px solid var(--stroke);border-radius:12px;padding:6px 10px}
+  .time{font-weight:900;font-size:20px;min-width:70px;text-align:center}
+  .tbtn{background:#0c1428;border:1px solid #1f2937;color:#dbeafe;border-radius:10px;padding:6px 10px;font-weight:800;cursor:pointer}
+  .tbtn:active{transform:translateY(1px)}
+
+  /* Question */
+  .questionRow{display:flex;justify-content:center;align-items:stretch;gap:20px;position:relative;z-index:60;height:fit-content;min-height:auto}
+  .question{
+    text-align:center;font-size:clamp(36px,7vw,80px);font-weight:900;letter-spacing:.2px;
+    padding:10px 14px;background:rgba(15,23,42,.6);border:1px solid var(--stroke);border-radius:14px;
+    width:min(1200px,100%);min-height:2.8em;white-space:normal;flex-shrink:0;line-height:1.2;max-height:2.4em;overflow:hidden;margin-top:0;
+  }
+  .question-helper{
+    background:rgba(15,23,42,.6);border:1px solid var(--stroke);border-radius:10px;
+    display:flex;flex-direction:column;cursor:pointer;transition:all .2s;position:relative;flex:1;z-index:1;margin-top:0;pointer-events:none;align-self:stretch;
+  }
+  .question-helper:hover{
+    background:rgba(15,23,42,.8);border-color:#475569;
+  }
+  .helper-title{
+    padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-align:center;border-bottom:1px solid var(--stroke);position:absolute;top:0;left:0;right:0;z-index:1;background:rgba(15,23,42,.9);margin:0;border-radius:10px 10px 0 0;pointer-events:none;
+  }
+  .helper-content{
+    flex:1;padding:8px;position:relative;margin-top:40px;pointer-events:none;
+  }
+
+  /* Stage */
+  .stage{position:relative;display:flex;flex-direction:column;gap:0;min-height:0;flex:1}
+  #badgeLayer{position:absolute;inset:0;z-index:10000;pointer-events:none}
+  #badgeLayer .badge{pointer-events:auto}
+
+  .zones{display:grid;gap:10px;grid-auto-rows:minmax(180px,1fr);flex:1;min-height:0}
+  .zone{position:relative;border-radius:18px;border:2px dashed #94a3b8;padding:10px;box-shadow:0 12px 36px rgba(0,0,0,.18) inset}
+  .zone h3{margin:0 0 6px 0;font-size:clamp(16px,2vw,24px);font-weight:900;color:#0b1020;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+  .blue{background:var(--p-blue);border-color:var(--p-blue-b)}
+  .red{background:var(--p-red);border-color:var(--p-red-b)}
+  .green{background:var(--p-green);border-color:var(--p-green-b)}
+  .purple{background:var(--p-purple);border-color:var(--p-purple-b)}
+
+  /* Parking */
+  .parking{background:#0b1226;border-radius:16px;border:1px solid var(--stroke);padding:10px;min-height:210px;position:relative;flex-shrink:0}
+  #parkingPad{position:absolute;inset:8px;border:2px dashed #1f2937;border-radius:12px;min-height:230px}
+  #parkingLabel{position:absolute;top:14px;left:16px;background:rgba(2,6,23,.8);border:1px solid #1f2937;color:#cbd5e1;padding:6px 10px;border-radius:10px;font-weight:900;font-size:14px;box-shadow:0 8px 18px rgba(0,0,0,.35)}
+
+  /* Steps row */
+  .stepsRow{display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 10px;height:42px;background:#0b1226;border:1px solid var(--stroke);border-radius:12px;white-space:nowrap;flex-shrink:0}
+  .stepPill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-weight:900;font-size:14px;background:#0f172a;border:1px solid #1f2937}
+  .stepSep{opacity:.7}
+
+  /* Badges */
+  .badge{position:absolute;touch-action:none;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-weight:800;font-size:clamp(14px,1.8vw,20px);color:#0b1226;background:linear-gradient(180deg,#f8fafc,#e2e8f0);box-shadow:0 10px 22px rgba(0,0,0,.35);border:2px solid #0f172a;transition:top .25s cubic-bezier(.34,1.56,.64,1), left .25s cubic-bezier(.34,1.56,.64,1);z-index:1}
+  .badge.inParking:not(.teacher){background:linear-gradient(180deg,#fff1e6,#ffd7b5);border-color:#9a6a3a}
+  .badge.teacher{background:linear-gradient(180deg,#fff7d6,#fde68a);border-color:#b45309}
+  .badge[data-zone="partner"], .badge[data-zone="help"]{background:linear-gradient(180deg,#fee2e2,#fecaca);border-color:#dc2626}
+  .badge.pickedHidden{opacity:0;pointer-events:none;transition:opacity .2s}
+  .badge.spinning{outline:4px solid var(--warn)}
+  .badge.winner{outline:6px solid var(--ok)}
+  
+  /* Remove browser arrows from number input */
+  #partnerSize::-webkit-outer-spin-button,
+  #partnerSize::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  #partnerSize {
+    -moz-appearance: textfield;
+  }
+
+  /* Modals */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+  .modal.show{display:flex}
+  .sheet{width:min(1100px,95vw);max-height:90vh;overflow:auto;background:#0b1226;border:1px solid var(--stroke);border-radius:18px;padding:18px;box-shadow:0 22px 64px rgba(0,0,0,.5);color:var(--ink)}
+  .sheet h2{margin:0 0 10px}
+  .sheet section{border:1px solid #1f2937;border-radius:14px;padding:12px;margin:10px 0;background:#0c1428}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .pair{display:flex;align-items:center;gap:8px;margin-right:16px}
+  .sheet input,.sheet select,.sheet textarea,.sheet button{font-size:16px;border-radius:12px;border:1px solid #334155;background:#0b1226;color:var(--ink);padding:10px 12px}
+  .sheet button{box-shadow:0 8px 18px rgba(0,0,0,.35)}
+  .sheet button:active{transform:translateY(1px) scale(.98);box-shadow:0 6px 12px rgba(0,0,0,.35)}
+  .answers-grid{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .answers-grid .a{display:flex;gap:8px;align-items:center}
+  .answers-grid .lbl{width:130px;font-weight:800;text-align:right;opacity:.9}
+  .answers-grid input{flex:1}
+
+  .btn-primary{background:linear-gradient(180deg,#34d399,#22c55e);color:#05220f;border:1px solid #166b3b}
+  .btn-ghost{background:#0b1226;border:1px solid #1f2937;color:#d1d5db}
+
+  .switch{position:relative;width:56px;height:30px;background:#0c1428;border:1px solid #1f2937;border-radius:999px;cursor:pointer}
+  .switch input{display:none}
+  .knob{position:absolute;top:3px;left:3px;width:24px;height:24px;background:#cbd5e1;border-radius:50%;transition:left .18s}
+  .switch input:checked + .knob{left:29px;background:#34d399}
+
+  .toast{position:fixed;bottom:16px;left:16px;background:#0b1226;color:var(--ink);border:1px solid var(--stroke);border-radius:12px;padding:10px 14px;opacity:0;transform:translateY(8px);transition:.25s;z-index:10001}
+  .toast.show{opacity:1;transform:translateY(0)}
+  #qDebug{position:fixed;right:10px;bottom:10px;background:#0b1226;border:1px solid #1f2937;border-radius:10px;padding:8px 10px;font:12px/1.2 Lexend;color:#cbd5e1;opacity:.85;z-index:130;display:none}
+
+  /* Response buttons */
+  .response-buttons{display:flex;gap:8px}
+  .response-btn{background:#0c1428;border:1px solid #1f2937;color:#dbeafe;border-radius:10px;padding:8px 16px;font-weight:800;cursor:pointer;transition:all .2s}
+  .response-btn:hover{background:#0f172a;border-color:#334155}
+  .response-btn.active{background:linear-gradient(180deg,#34d399,#22c55e);color:#05220f;border-color:#166b3b}
+
+  /* Preset buttons */
+  .preset-btn{background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:10px;padding:8px 16px;font-weight:800;cursor:pointer;transition:all .2s}
+  .preset-btn:hover{background:#1e293b;border-color:#475569;color:#cbd5e1}
+
+  #settingsModal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);display:none;justify-content:center;align-items:center;z-index:99999}
+  #settingsModal.show{display:flex}
+
+  #aiModal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);display:none;justify-content:center;align-items:center;z-index:9999999}
+  
+  /* Winner modal should be above badges but below settings */
+  #winnerModal{z-index:10002}
+  #aiModal.show{display:flex}
+</style>
+</head>
+<body>
+
+
+
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="stats">
+      <span id="aiStatus" style="cursor: pointer; font-weight: bold; display: none;" onclick="openAISettings()">❌</span>
+      <span id="placedCount">Placed: 0</span>
+      <span id="absentCount">Absent (not placed): 20</span>
+      <div class="partner-input" style="display: inline-flex; align-items: center; gap: 8px; margin-left: 60px;">
+        <button class="tbtn" id="decreaseGroupSize" style="padding: 4px 8px;">▼</button>
+        <input id="partnerSize" type="number" min="2" max="10" value="2" style="width: 40px; background: #0b1226; border: 1px solid var(--stroke); color: var(--ink); border-radius: 8px; padding: 4px 6px; font-size: 14px; font-weight: 700; text-align: center; -webkit-appearance: none !important; -moz-appearance: textfield !important; appearance: none !important;" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
+        <button class="tbtn" id="increaseGroupSize" style="padding: 4px 8px;">▲</button>
+        <button id="partnerBtn" class="topbtn" style="padding: 6px 10px; font-size: 14px;">👥</button>
+      </div>
+    </div>
+
+    <!-- Center timer -->
+    <div class="timerWrap">
+      <div class="timerBox">
+        <button class="tbtn" id="tReset">↻</button>
+        <button class="tbtn" id="minus30">−</button>
+        <div class="time" id="timeText">1:00</div>
+        <button class="tbtn" id="plus30">+</button>
+        <button class="tbtn" id="startPause">▶</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="topbtn" id="openSettings">⚙️ Settings</button>
+      <button class="topbtn" id="quickReset">Reset</button>
+      <button class="topbtn" id="readAloudBtn">🗣️</button>
+      <button class="topbtn" id="randomBtn">🎡 Pick Random Student</button>
+    </div>
+  </div>
+
+  <div class="questionRow">
+    <div class="question-helper" id="partnerArea">
+      <div class="helper-title">🔎 Partner</div>
+      <div class="helper-content"></div>
+    </div>
+    <div class="question" id="question">Loading question…</div>
+    <div class="question-helper" id="helpArea">
+      <div class="helper-title">📖 Help</div>
+      <div class="helper-content"></div>
+    </div>
+  </div>
+  <!-- Hidden live region for enforced paint/AT -->
+  <div aria-live="polite" aria-atomic="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden" id="qLive">Loading question…</div>
+
+  <div class="stage" id="stage">
+    <div class="zones" id="zones"></div>
+    <div class="parking" id="parking"><div id="parkingPad"></div><div id="parkingLabel">🅿️ Parking Lot / Absent</div></div>
+    <div class="stepsRow">
+      <div class="stepPill">📖 READ</div><span class="stepSep">›</span>
+      <div class="stepPill">🤔 THINK</div><span class="stepSep">›</span>
+      <div class="stepPill">👥 DISCUSS</div><span class="stepSep">›</span>
+      <div class="stepPill">➡️ MOVE</div><span class="stepSep">›</span>
+      <div class="stepPill">🗣️ EXPLAIN</div>
+    </div>
+    <div id="badgeLayer"></div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal" id="settingsModal"><div class="sheet">
+  <h2>⚙️ Settings</h2>
+
+  <!-- 1. Question -->
+  <section>
+    <div class="row">
+      <label style="min-width:110px;font-weight:800">Question</label>
+      <input id="qInput" placeholder="Daily question (or generate with AI)" style="flex:1"/>
+    </div>
+  </section>
+
+  <!-- 2. Responses -->
+  <section>
+    <div class="row" style="gap:16px">
+      <div class="pair">
+        <label style="min-width:110px;font-weight:800">Responses</label>
+        <div class="response-buttons">
+          <button class="response-btn" data-value="2">2</button>
+          <button class="response-btn" data-value="3">3</button>
+          <button class="response-btn active" data-value="4">4</button>
+          <button class="response-btn" data-value="open">Open</button>
+          <button class="response-btn" data-value="wyr">Would You Rather?</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Response fields -->
+  <section id="answersWrap">
+    <div class="answers-grid">
+      <div class="a"><div class="lbl">Answer A</div><input id="a1" value="Work alone"></div>
+      <div class="a"><div class="lbl">Answer B</div><input id="a2" value="Work with a partner"></div>
+      <div class="a"><div class="lbl">Answer C</div><input id="a3" value="Ask a teacher"></div>
+      <div class="a"><div class="lbl">Answer D</div><input id="a4" value="Try a new strategy"></div>
+    </div>
+  </section>
+
+  <!-- Filters + AI -->
+  <section>
+    <div class="row" style="margin-top:4px">
+      <label style="font-weight:800">Keywords</label>
+      <input id="keywordInput" placeholder="e.g., patterns, habitats, friendship" style="flex:1;min-width:260px"/>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <div class="pair">
+        <label style="font-weight:800">Grade</label>
+        <select id="gradeInput"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+      </div>
+      <div class="pair">
+        <label style="font-weight:800">Concise</label>
+        <label class="switch" title="Shorten questions and responses">
+          <input type="checkbox" id="conciseToggle">
+          <span class="knob"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <div class="pair"><label style="font-weight:800">Bloom's</label>
+        <select id="bloomsInput">
+          <option>Remember</option><option>Understand</option><option>Apply</option><option>Analyze</option>
+          <option selected>Evaluate</option><option>Create</option>
+        </select>
+      </div>
+      <div class="pair"><label style="font-weight:800">Subject</label>
+        <select id="subjectInput">
+          <option selected>General</option><option>Math</option><option>Language</option><option>Science</option>
+          <option>Social Studies</option><option>Drama</option><option>Dance</option>
+          <option>Visual Arts</option><option>Music</option><option>Phys-Ed</option>
+        </select>
+      </div>
+      <div class="pair"><label style="font-weight:800">Learning Skill</label>
+        <select id="lsInput">
+          <option selected>General</option>
+          <option>Responsibility</option><option>Organization</option><option>Independent Work</option>
+          <option>Collaboration</option><option>Initiative</option><option>Self-Regulation</option>
+        </select>
+      </div>
+      <div class="pair"><label style="font-weight:800">SEL</label>
+        <select id="selInput">
+          <option value="">(optional)</option>
+          <!-- options injected by JS from SEL_TOPICS -->
+        </select>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:16px">
+      <button id="genBtn">✨ Generate with AI</button>
+      <button id="aiBtn">🤖 AI Settings</button>
+      <span id="aiStatusMain" style="font-weight:700;color:#94a3b8">AI: not checked</span>
+      <button id="resetFiltersBtn" style="margin-left:auto">🔄 Reset Filters</button>
+    </div>
+
+  </section>
+
+  <!-- Tools row -->
+  <section>
+    <div class="row" style="gap:12px;flex-wrap:wrap">
+      <button id="openRoster">👥 Edit Roster</button>
+      <button id="saveBtn">💾 Save Layout</button>
+      <button id="loadBtn">⭳ Load Layout</button>
+      <button id="allToParkingBtn">🅿️ All to Parking</button>
+      <button id="resetWeekBtn">🗓️ Reset Week</button>
+    </div>
+  </section>
+
+  <!-- Preset buttons row -->
+  <section>
+    <div class="row" style="gap:12px;flex-wrap:wrap">
+      <button id="presetMood" class="preset-btn">🟦🟥🟨🟩 Mood Checker</button>
+      <button id="presetWeekend" class="preset-btn">🌤️ Weekend Reflection</button>
+      <button id="presetLeo" class="preset-btn">🦁 Leo's Ceremony</button>
+    </div>
+  </section>
+
+  <div class="row" style="justify-content:center;margin-top:16px;gap:20px">
+    <button id="applySettings" class="btn-primary" style="font-weight:900;padding:14px 24px;font-size:18px">✅ OK</button>
+    <button id="closeSettings" class="btn-ghost" style="padding:14px 24px;font-size:18px">Cancel</button>
+  </div>
+</div></div>
+
+<!-- Roster modal -->
+<div class="modal" id="rosterModal"><div class="sheet">
+  <h2>👥 Edit roster (students only)</h2>
+  <textarea id="rosterInput" style="width:100%;min-height:260px">Abdallah
+Robyn
+Layla
+Keerthy
+Hakim
+Melania
+Halo
+Abbas
+Penelope
+Harnoor
+Sean
+Su
+Caleb
+Elena
+Selena
+Anisha
+Iris
+Jazmine
+Alayna
+Shreyansh</textarea>
+  <div class="row"><button id="applyRoster">Apply roster</button><button id="closeRoster">Cancel</button></div>
+</div></div>
+
+<!-- AI settings -->
+<div class="modal" id="aiModal"><div class="sheet">
+  <h2>🤖 AI Question Generator (Gemini)</h2>
+  <p>A default API key is provided, but you can paste your own Google AI Studio key (saved locally in your browser).</p>
+  <div class="row"><label style="min-width:140px">API Key</label><input id="aiKey" placeholder="AIza..." style="flex:1"/></div>
+      <div class="row"><label style="min-width:140px">Model</label><input id="aiModel" placeholder="gemini-2.0-flash" style="flex:1"/></div>
+  <div class="row"><label style="min-width:140px">Quick Switch:</label>
+    <div style="flex:1;display:flex;gap:8px;">
+      <button id="model2Flash" class="model-btn" style="padding:4px 8px;font-size:12px;">2.0 Flash</button>
+      <button id="model1Flash" class="model-btn" style="padding:4px 8px;font-size:12px;">1.5 Flash</button>
+      <button id="model1Pro" class="model-btn" style="padding:4px 8px;font-size:12px;">1.5 Pro</button>
+    </div>
+  </div>
+          <div class="row">
+          <span id="aiStatusDetail2" style="flex:1;font-weight:700;color:#94a3b8">Status: not checked</span>
+          <div id="tokenProgress" style="display:inline-flex;align-items:center;margin-right:10px;font-size:12px;">
+            <span id="tokenKeyName" style="margin-right:4px;color:#94a3b8;">main</span>
+            <div style="width:40px;height:8px;background:#374151;border-radius:2px;overflow:hidden;border:1px solid #6b7280;">
+              <div id="tokenProgressFill" style="width:100%;height:100%;background:#22c55e;transition:all 0.3s ease;"></div>
+            </div>
+            <span id="tokenProgressText" style="margin-left:4px;color:#94a3b8;">200</span>
+          </div>
+          <button id="aiTest">Test Connection</button>
+        </div>
+        <div style="margin-top:15px;padding:10px;background:#f8fafc;border-radius:6px;">
+          <div style="font-weight:600;margin-bottom:8px;color:#374151;">API Key Selection:</div>
+          <div style="display:flex;gap:8px;">
+            <button id="keyMain" style="flex:1;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;font-weight:500;background:#22c55e;color:white;">Main</button>
+            <button id="keyBU1" style="flex:1;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;font-weight:500;background:#6b7280;color:#d1d5db;">BU1</button>
+            <button id="keyBU2" style="flex:1;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;font-weight:500;background:#6b7280;color:#d1d5db;">BU2</button>
+          </div>
+        </div>
+  <div style="height:10px"></div>
+  <button id="aiSave" class="btn-primary">Save</button> <button id="aiClose" class="btn-ghost">Cancel</button>
+</div></div>
+
+<!-- Winner -->
+<div class="modal" id="winnerModal"><div class="sheet" style="text-align:center">
+  <h2 id="winnerText" style="font-size:clamp(28px,4.8vw,60px);margin:0 0 8px;color:#22c55e;"></h2>
+  <div id="winnerSub" style="font-size:clamp(18px,2.4vw,30px);opacity:.9"></div>
+  <button id="closeWinner" class="btn-primary">OK</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+<div id="qDebug" style="display:none"></div>
+
+<script>
+(function(){
+  console.log('=== SCRIPT STARTED ===');
+  
+  const SHOW_Q_DEBUG = false;
+
+  // ---------- helpers ----------
+  const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+  const raf=()=>new Promise(r=>requestAnimationFrame(()=>r()));
+  const rect=el=>el.getBoundingClientRect();
+  const center=el=>{const r=rect(el);return{x:r.left+r.width/2,y:r.top+r.height/2}};
+  const within=(p,el)=>{const r=rect(el);return p.x>=r.left&&p.x<=r.right&&p.y>=r.top&&p.y<=r.bottom};
+  const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f}catch{return f}};
+  function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1700)}
+  
+    // --------------- Simple AudioBank (Web Audio) ---------------
+  class AudioBank {
+    constructor() {
+      this.ctx = null;
+      this.master = null;
+      this.loops = new Map();
+      this.ready = false;
+    }
+    getCtx() {
+      if(!this.ctx || this.ctx.state === 'closed') {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)({latencyHint: 'interactive'});
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.9;
+        this.master.connect(this.ctx.destination);
+      }
+      if(this.ctx.state === 'suspended') this.ctx.resume();
+      return this.ctx;
+    }
+    async init() {
+      this.getCtx();
+      this.ready = true;
+    }
+    // Synthesized SMB3 coin sound
+    playCoin({volume=1, rate=1, detune=0}={}) {
+      const ctx = this.getCtx();
+      const t0 = ctx.currentTime;
+      
+      // SMB3 coin: bright square wave with quick decay
+      const o = ctx.createOscillator();
+      o.type = 'square';
+      o.frequency.setValueAtTime(1568 * rate, t0);
+      if('detune' in o) o.detune.value = detune;
+      
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(volume * 0.8, t0 + 0.001);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06);
+      
+      o.connect(g).connect(this.master);
+      o.start(t0);
+      o.stop(t0 + 0.08);
+    }
+    // Synthesized SMB3 1-UP sound
+    playOneUp({volume=1, rate=1}={}) {
+      const ctx = this.getCtx();
+      const t0 = ctx.currentTime;
+      
+      // SMB3 1-UP: ascending triad with sparkle
+      const notes = [
+        {f: 988, d: 0.08},   // B5
+        {f: 1318.5, d: 0.08}, // E6
+        {f: 1760, d: 0.12}    // A6
+      ];
+      
+      let time = t0;
+      notes.forEach((note, i) => {
+        const o = ctx.createOscillator();
+        o.type = 'square';
+        o.frequency.setValueAtTime(note.f * rate, time);
+        
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, time);
+        g.gain.exponentialRampToValueAtTime(volume * 0.6, time + 0.002);
+        g.gain.exponentialRampToValueAtTime(0.0001, time + note.d);
+        
+        o.connect(g).connect(this.master);
+        o.start(time);
+        o.stop(time + note.d + 0.02);
+        
+        time += note.d * 0.9; // slight overlap
+      });
+      
+      // Sparkle at the end
+      setTimeout(() => {
+        const s = ctx.createOscillator();
+        s.type = 'triangle';
+        s.frequency.setValueAtTime(2349.3 * rate, ctx.currentTime);
+        
+        const sg = ctx.createGain();
+        sg.gain.setValueAtTime(0.0001, ctx.currentTime);
+        sg.gain.exponentialRampToValueAtTime(volume * 0.3, ctx.currentTime + 0.002);
+        sg.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
+        
+        s.connect(sg).connect(this.master);
+        s.start();
+        s.stop(ctx.currentTime + 0.12);
+      }, (time - t0) * 1000);
+    }
+    
+    // Alternative: Victory Fanfare (C major → G major → C major)
+    playVictoryFanfare({volume=1, rate=1}={}) {
+      const ctx = this.getCtx();
+      const t0 = ctx.currentTime;
+      
+      // C major → G major → C major progression
+      const chords = [
+        [{f: 523.25, d: 0.3}, {f: 659.25, d: 0.3}, {f: 783.99, d: 0.3}], // C major
+        [{f: 783.99, d: 0.3}, {f: 987.77, d: 0.3}, {f: 1174.66, d: 0.3}], // G major
+        [{f: 1046.5, d: 0.4}, {f: 1318.5, d: 0.4}, {f: 1567.98, d: 0.4}]  // C major (octave up)
+      ];
+      
+      chords.forEach((chord, chordIndex) => {
+        const chordTime = t0 + chordIndex * 0.35;
+        chord.forEach(note => {
+          const o = ctx.createOscillator();
+          o.type = 'square';
+          o.frequency.setValueAtTime(note.f * rate, chordTime);
+          
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, chordTime);
+          g.gain.exponentialRampToValueAtTime(volume * 0.4, chordTime + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, chordTime + note.d);
+          
+          o.connect(g).connect(this.master);
+          o.start(chordTime);
+          o.stop(chordTime + note.d + 0.02);
+        });
+      });
+    }
+    
+    // Alternative: Power-Up Arpeggio (A major ascending)
+    playPowerUp({volume=1, rate=1}={}) {
+      const ctx = this.getCtx();
+      const t0 = ctx.currentTime;
+      
+      // A major arpeggio: A5 → C#6 → E6 → A6 → C#7
+      const notes = [
+        {f: 880, d: 0.06},    // A5
+        {f: 1108.73, d: 0.06}, // C#6
+        {f: 1318.5, d: 0.06},  // E6
+        {f: 1760, d: 0.08},    // A6
+        {f: 2217.46, d: 0.1}   // C#7
+      ];
+      
+      let time = t0;
+      notes.forEach((note, i) => {
+        const o = ctx.createOscillator();
+        o.type = 'square';
+        o.frequency.setValueAtTime(note.f * rate, time);
+        
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, time);
+        g.gain.exponentialRampToValueAtTime(volume * 0.5, time + 0.002);
+        g.gain.exponentialRampToValueAtTime(0.0001, time + note.d);
+        
+        o.connect(g).connect(this.master);
+        o.start(time);
+        o.stop(time + note.d + 0.02);
+        
+        time += note.d * 0.85; // tight overlap
+      });
+    }
+    
+    // Alternative: Star Power (ascending glissando with sparkle)
+    playStarPower({volume=1, rate=1}={}) {
+      const ctx = this.getCtx();
+      const t0 = ctx.currentTime;
+      
+      // Glissando from C5 to C7
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(523.25 * rate, t0);
+      o.frequency.exponentialRampToValueAtTime(2093 * rate, t0 + 0.4);
+      
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(volume * 0.6, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.4);
+      
+      o.connect(g).connect(this.master);
+      o.start(t0);
+      o.stop(t0 + 0.45);
+      
+      // Sparkle effect at the end
+      setTimeout(() => {
+        for(let i = 0; i < 5; i++) {
+          setTimeout(() => {
+            const s = ctx.createOscillator();
+            s.type = 'sine';
+            s.frequency.setValueAtTime((2000 + Math.random() * 1000) * rate, ctx.currentTime);
+            
+            const sg = ctx.createGain();
+            sg.gain.setValueAtTime(0.0001, ctx.currentTime);
+            sg.gain.exponentialRampToValueAtTime(volume * 0.2, ctx.currentTime + 0.001);
+            sg.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.05);
+            
+            s.connect(sg).connect(this.master);
+            s.start();
+            s.stop(ctx.currentTime + 0.07);
+          }, i * 30);
+        }
+      }, 400);
+    }
+    
+    // Synthesized SMB3 Course Clear Fanfare (shortened version)
+    playCourseClear({volume=1, rate=1}={}) {
+      const ctx = this.getCtx();
+      const t0 = ctx.currentTime;
+      
+      // Just the first 4 notes
+      const notes = [
+        {f: 523.25, d: 0.15},  // C5 (first)
+        {f: 659.25, d: 0.15},  // E5 (second)
+        {f: 783.99, d: 0.15},  // G5 (third)
+        {f: 1046.5, d: 0.2}    // C6 (fourth)
+      ];
+      
+      let time = t0;
+      
+      // Play the 5 notes
+      notes.forEach((note, index) => {
+        const o = ctx.createOscillator();
+        o.type = 'square';
+        o.frequency.setValueAtTime(note.f * rate, time);
+        
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, time);
+        g.gain.exponentialRampToValueAtTime(volume * 0.5, time + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, time + note.d);
+        
+        o.connect(g).connect(this.master);
+        o.start(time);
+        o.stop(time + note.d + 0.02);
+        
+        time += note.d * 0.9;
+      });
+      
+      // Final sparkle effect
+      setTimeout(() => {
+        for(let i = 0; i < 5; i++) {
+          setTimeout(() => {
+            const s = ctx.createOscillator();
+            s.type = 'triangle';
+            s.frequency.setValueAtTime((1500 + Math.random() * 1000) * rate, ctx.currentTime);
+            
+            const sg = ctx.createGain();
+            sg.gain.setValueAtTime(0.0001, ctx.currentTime);
+            sg.gain.exponentialRampToValueAtTime(volume * 0.3, ctx.currentTime + 0.001);
+            sg.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
+            
+            s.connect(sg).connect(this.master);
+            s.start();
+            s.stop(ctx.currentTime + 0.1);
+          }, i * 50);
+        }
+      }, (time - t0 + 0.2) * 1000);
+    }
+    // Synthesized shuffle loop
+    startShuffleLoop({volume=0.6, rate=1}={}) {
+      this.stopShuffleLoop();
+      const ctx = this.getCtx();
+      
+      const playShuffleTick = () => {
+        const o = ctx.createOscillator();
+        o.type = 'square';
+        o.frequency.setValueAtTime(800 * rate, ctx.currentTime);
+        
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(volume * 0.4, ctx.currentTime + 0.001);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
+        
+        o.connect(g).connect(this.master);
+        o.start();
+        o.stop(ctx.currentTime + 0.06);
+      };
+      
+      const interval = setInterval(playShuffleTick, 120);
+      this.loops.set('shuffle', {interval});
+    }
+    stopShuffleLoop() {
+      const rec = this.loops.get('shuffle');
+      if(rec && rec.interval) {
+        clearInterval(rec.interval);
+        this.loops.delete('shuffle');
+      }
+    }
+  }
+
+  // ------------------ Instantiate bank ------------------
+  const SFX = new AudioBank();
+
+  // Confetti animation function
+  function createConfetti() {
+    console.log('createConfetti called');
+    try {
+      const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ff8800', '#8800ff'];
+      const confettiCount = 100;
+      
+      for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement('div');
+        confetti.style.position = 'fixed';
+        confetti.style.width = '10px';
+        confetti.style.height = '10px';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.left = Math.random() * window.innerWidth + 'px';
+        confetti.style.top = '-10px';
+        confetti.style.zIndex = '10003'; // Higher than winner modal (10002)
+        confetti.style.pointerEvents = 'none';
+        confetti.style.borderRadius = '50%';
+        
+        document.body.appendChild(confetti);
+        
+        // Animate confetti falling from the modal area
+        const animation = confetti.animate([
+          { transform: 'translateY(0px) rotate(0deg)', opacity: 1 },
+          { transform: `translateY(${window.innerHeight + 100}px) rotate(${Math.random() * 360}deg)`, opacity: 0 }
+        ], {
+          duration: 3000 + Math.random() * 2000,
+          easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        });
+        
+        animation.onfinish = () => {
+          document.body.removeChild(confetti);
+        };
+      }
+      console.log('Confetti created successfully');
+    } catch (error) {
+      console.error('Error creating confetti:', error);
+    }
+  }
+  
+  // === Winner celebration functions ===
+  
+  // Short 1-UP sound for quick wins
+  function playApplause() {
+    try {
+      // Winner = classic SMB3 1-UP
+      SFX.playOneUp({ volume: 0.95, rate: 1 });
+    } catch {}
+  }
+  
+  // Longer course clear fanfare for major victories
+  function applauseFanfare() {
+    try {
+      // Stop any shuffle loops first
+      SFX.stopShuffleLoop();
+      
+      // Play first 4 notes of course clear fanfare, then 1-UP sound
+      const ctx = SFX.getCtx();
+      const t0 = ctx.currentTime;
+      
+      // First 4 notes of course clear fanfare
+      const notes = [
+        {f: 523.25, d: 0.15},  // C5 (first)
+        {f: 659.25, d: 0.15},  // E5 (second)
+        {f: 783.99, d: 0.15},  // G5 (third)
+        {f: 1046.5, d: 0.2}    // C6 (fourth)
+      ];
+      
+      let time = t0;
+      
+      // Play the 4 notes
+      notes.forEach((note, index) => {
+        const o = ctx.createOscillator();
+        o.type = 'square';
+        o.frequency.setValueAtTime(note.f, time);
+        
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, time);
+        g.gain.exponentialRampToValueAtTime(0.95 * 0.5, time + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, time + note.d);
+        
+        o.connect(g).connect(SFX.master);
+        o.start(time);
+        o.stop(time + note.d + 0.02);
+        
+        time += note.d * 0.9;
+      });
+      
+      // After the 4 notes, play the 1-UP sound
+      setTimeout(() => {
+        SFX.playOneUp({ volume: 0.95, rate: 1 });
+      }, (time - t0 + 0.2) * 1000);
+      
+    } catch {}
+  }
+
+  // ---------- QUESTION: hard replace + live region + repaint ----------
+  function updateQDebug(){
+    if(!SHOW_Q_DEBUG) return;
+    const box = document.getElementById('qDebug');
+    const last = localStorage.getItem('mxq_last_question_raw') || '(none)';
+    const meta = localStorage.getItem('mxq_ai_lastgen') || '(no meta)';
+    box.style.display='block';
+    box.textContent = `Q(raw): ${last}  |  meta: ${meta}`;
+  }
+  async function renderQuestionForce(text){
+    console.log('renderQuestionForce called with:', text);
+    const row = document.querySelector('.questionRow');
+    const old = document.getElementById('question');
+    console.log('Found question row:', row);
+    console.log('Found old question element:', old);
+    
+    const n = document.createElement('div');
+    n.className = old.className; n.id = 'question';
+    n.textContent = text || '—';
+    console.log('Created new question element with text:', n.textContent);
+    
+    // replace node
+    row.replaceChild(n, old);
+    console.log('Replaced question element');
+    
+    // Adjust font size to fit on 2 lines
+    adjustQuestionFontSize(n);
+    
+    // live region update for AT + paint
+    const live = document.getElementById('qLive');
+    live.textContent = text || '—';
+    console.log('Updated live region with text:', live.textContent);
+    
+    // Repaint nudges
+    await raf(); await raf();
+    n.style.transform='translateZ(0)'; // promote
+    void n.offsetHeight;
+    // tiny swap to force glyph rasterization
+    n.textContent = (text||'—') + '\u00A0';
+    await raf();
+    n.textContent = (text||'—');
+    console.log('Final question element text:', n.textContent);
+    
+    // Force a complete refresh of the question field
+    setTimeout(() => {
+      const finalQuestion = document.getElementById('question');
+      console.log('Question element after timeout:', finalQuestion);
+      console.log('Question element text content after timeout:', finalQuestion?.textContent);
+      
+      // If the question still doesn't match, force update it
+      if (finalQuestion && finalQuestion.textContent !== text) {
+        console.log('Question content mismatch detected, forcing update...');
+        finalQuestion.textContent = text;
+        console.log('Forced question update to:', finalQuestion.textContent);
+      }
+    }, 50);
+  }
+  
+  function adjustQuestionFontSize(questionEl) {
+    const maxHeight = 2.4; // 2 lines * 1.2 line-height
+    let fontSize = parseFloat(window.getComputedStyle(questionEl).fontSize);
+    const originalFontSize = fontSize;
+    
+    // Reset to original size first
+    questionEl.style.fontSize = originalFontSize + 'px';
+    
+    // Check if content overflows and reduce font size until it fits
+    while (questionEl.scrollHeight > questionEl.clientHeight && fontSize > 16) {
+      fontSize -= 2;
+      questionEl.style.fontSize = fontSize + 'px';
+    }
+    
+    // Force a reflow to ensure the height calculation is accurate
+    questionEl.offsetHeight;
+    
+    // Double-check and reduce more if needed
+    if (questionEl.scrollHeight > questionEl.clientHeight && fontSize > 12) {
+      fontSize -= 4;
+      questionEl.style.fontSize = fontSize + 'px';
+    }
+  }
+  function setQuestionSafe(q){
+    console.log('setQuestionSafe called with:', q);
+    let text = (q||'').trim();
+    console.log('Trimmed text:', text);
+    localStorage.setItem('mxq_last_question_raw', text);
+    
+    if(!text || text.replace(/\s+/g,'').length<2){
+      console.log('Question too short, using fallback');
+      const grade=load('mxq_grade','2'), subject=load('mxq_subject','General'), blooms=load('mxq_blooms','Evaluate');
+      const verbMap={Remember:'show what you know',Understand:'explain your thinking',Apply:'use your skills',Analyze:'compare or find a pattern',Evaluate:'choose and justify',Create:'plan or design'};
+      const verb=verbMap[blooms]||'explain your thinking';
+      text = subject!=='General'?`How will you ${verb} in ${subject} today?`:`What is one smart way you can ${verb} today?`;
+      localStorage.setItem('mxq_ai_lastgen', JSON.stringify({questionSource:'fallback',time:Date.now()}));
+    } else {
+      console.log('Using AI-generated question');
+      const prev = JSON.parse(localStorage.getItem('mxq_ai_lastgen')||'{}');
+      localStorage.setItem('mxq_ai_lastgen', JSON.stringify({...prev,questionSource:'model',time:Date.now()}));
+    }
+    
+    console.log('About to render question:', text);
+    renderQuestionForce(text).then(() => {
+      console.log('Question rendering complete');
+      updateQDebug();
+      
+      // Check if the question is actually in the DOM
+      const questionElement = document.getElementById('question');
+      console.log('Question element after render:', questionElement);
+      console.log('Question element text content:', questionElement?.textContent);
+      
+      // Also update the qInput field in settings if it exists
+      const qInput = document.getElementById('qInput');
+      if (qInput) {
+        qInput.value = text;
+        console.log('Updated qInput field with:', text);
+      }
+    });
+  }
+  // If anything empties the question, restore it
+  const mo=new MutationObserver(()=>{
+    const q=document.getElementById('question');
+    if(q && (!q.textContent || q.textContent.trim()==='')){
+      console.log('Mutation observer detected empty question, restoring...');
+      const last=localStorage.getItem('mxq_last_question_raw')||'—';
+      console.log('Restoring question to:', last);
+      renderQuestionForce(last);
+    }
+  });
+  mo.observe(document.body,{subtree:true,childList:true,characterData:true});
+
+  // ---------- zones / choices ----------
+  function setCols(n){$('#zones').style.gridTemplateColumns=`repeat(${n},minmax(0,1fr))`}
+  function buildZones(choices,colors){
+    const wrap=$('#zones'); wrap.innerHTML=''; setCols(choices.length);
+    choices.forEach((c,i)=>{const z=document.createElement('div'); z.className='zone '+(colors?.[i]||['blue','red','green','purple'][i%4]); z.dataset.zone=i; const h=document.createElement('h3'); h.textContent=c; z.appendChild(h); wrap.appendChild(z);});
+  }
+  function ensureEmojis(choices){
+    // add emoji if none detected on any; keep if already present
+    const hasAny = choices.some(c=>/^\p{Emoji}/u.test(c));
+    if(hasAny) return choices;
+    const pool=["🤝","🎲","📖","🔄","🎨","☀️","👫","🏃","🎵","🎭","🍎","🌎","🧩","✏️","🖌️","⚽","🎶","🦋","🚀","🪴","🕊️","🔍","🧠","💡","🛠️","��️","🧪","📐","🧮","🗣️"];
+    const used=new Set();
+    return choices.map(c=>{let e=pool.find(x=>!used.has(x))||"🎯"; used.add(e); return `${e} ${c}`});
+  }
+  function applyChoices(mode,lines){
+    let choices=[];
+    if(mode==='open'){choices=['🗣️ I\'ve got my answer and I\'m ready to explain it.']}
+    else{
+      const n=Math.max(2,Math.min(4,parseInt(mode,10)||4));
+      choices=lines.slice(0,n).filter(Boolean);
+      if(n>=3){
+        const haveOther=choices.some(c=>/other/i.test(c));
+        const final = haveOther? choices.filter(c=>!/other/i.test(c)).concat('Other (explain)') : choices.slice(0,n-1).concat('Other (explain)');
+        choices=final;
+      }
+    }
+    if(mode==='wyr'){
+      choices=lines.slice(0,2).filter(Boolean);
+    }
+    choices = ensureEmojis(choices); // <- keep emojis at start
+    const colors=choices.map((_,i)=>['blue','red','green','purple'][i%4]);
+    buildZones(choices,colors);
+    // Don't overwrite the question when saving choices
+    const currentQ = $('#question').textContent || localStorage.getItem('mxq_last_question_raw') || '';
+    save('mxq_choices',{q:currentQ,choices,colors,mode});
+    stats();
+  }
+
+  // ---------- parking + badges + auto-bump ----------
+  const TEACHER='Mr. Cushman';
+  let roster=[], badges=[], drag=null, pickedSet=new Set();
+  function parkingGrid(){const pad=$('#parkingPad'), rs=$('#stage').getBoundingClientRect(); const r=pad.getBoundingClientRect(); const topPad=42; const left0=r.left-rs.left+20, top0=r.top-rs.top+topPad, usableW=r.width-40; return {left0, top0, cols:Math.max(4,Math.floor(usableW/140))};}
+  function distribute(resetAll=false){
+    const g=parkingGrid(); let i=0;
+    badges.filter(b=>b.dataset.ignore!=='true').forEach(b=>{
+      if(!resetAll && b.dataset.zone!=='parking') return;
+      const col=i%g.cols, row=Math.floor(i/g.cols);
+      b.style.left=(g.left0+col*140)+'px'; b.style.top=(g.top0+row*64)+'px';
+      b.dataset.zone='parking'; b.dataset.lastX=b.style.left; b.dataset.lastY=b.style.top;
+      b.classList.add('inParking'); i++;
+    });
+    i++;
+    const t=badges.find(b=>b.dataset.ignore==='true');
+    if(t){
+      const col=i%g.cols,row=Math.floor(i/g.cols);
+      t.style.left=(g.left0+col*140)+'px'; t.style.top=(g.top0+row*64)+'px';
+      t.dataset.zone='parking'; t.dataset.lastX=t.style.left; t.dataset.lastY=t.style.top;
+      t.classList.add('inParking');
+    }
+  }
+  function makeBadges(){
+    $('#badgeLayer').innerHTML=''; badges=[];
+    const g=parkingGrid(); let i=0;
+    roster.forEach(name=>{
+      const el=document.createElement('div'); el.className='badge inParking'; el.textContent=name; el.setAttribute('draggable','false'); el.ondragstart=()=>false;
+      const col=i%g.cols,row=Math.floor(i/g.cols);
+      el.style.left=(g.left0+col*140)+'px'; el.style.top=(g.top0+row*64)+'px';
+      el.dataset.zone='parking'; el.dataset.lastX=el.style.left; el.dataset.lastY=el.style.top;
+      $('#badgeLayer').appendChild(el); enableDrag(el); badges.push(el); i++;
+    });
+    i++;
+    const t=document.createElement('div'); t.className='badge teacher inParking'; t.textContent=TEACHER; t.setAttribute('draggable','false'); t.ondragstart=()=>false;
+    const col=i%g.cols,row=Math.floor(i/g.cols);
+    t.style.left=(g.left0+col*140)+'px'; t.style.top=(g.top0+row*64)+'px';
+    t.dataset.zone='parking'; t.dataset.ignore='true'; t.dataset.lastX=t.style.left; t.dataset.lastY=t.style.top;
+    $('#badgeLayer').appendChild(t); enableDrag(t); badges.push(t);
+    stats();
+  }
+  function enableDrag(el){
+    el.addEventListener('pointerdown',e=>{e.preventDefault();el.setPointerCapture(e.pointerId);const r=el.getBoundingClientRect();drag={el,dx:e.clientX-r.left,dy:e.clientY-r.top};el.style.zIndex=Date.now();});
+    el.addEventListener('pointermove',e=>{if(!drag||drag.el!==el)return;const s=$('#stage').getBoundingClientRect();el.style.left=(e.clientX-s.left-drag.dx)+'px';el.style.top=(e.clientY-s.top-drag.dy)+'px';});
+    el.addEventListener('pointerup',()=>{if(!drag||drag.el!==el)return;settle(el);drag=null;});
+  }
+  function zoneSlots(zoneEl){
+    // returns an array of absolute positions inside zone where a badge could snap, avoiding the title
+    const sR=$('#stage').getBoundingClientRect();
+    const zR=zoneEl.getBoundingClientRect();
+    const h=zoneEl.querySelector('h3');
+    const headBottom = h? h.getBoundingClientRect().bottom : zR.top+10;
+    const startY = headBottom + 8 - sR.top;
+    const left = zR.left - sR.left + 10;
+    const right = zR.right - sR.left - 10;
+    const width = right - left;
+    const cols = Math.max(1, Math.floor(width/140));
+    const rows = 6; // plenty
+    const out=[];
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        out.push({x:left + c*140, y:startY + r*64});
+      }
+    }
+    return out;
+  }
+  function overlaps(a,b){
+    const ax=parseFloat(a.style.left), ay=parseFloat(a.style.top);
+    const bx=parseFloat(b.style.left), by=parseFloat(b.style.top);
+    return Math.abs(ax-bx)<130 && Math.abs(ay-by)<56; // rough badge footprint
+  }
+  function placeInZone(el, zoneEl){
+    // Allow completely free placement - no constraints at all
+    // Just determine which zone the badge belongs to based on where the majority is
+    const badgeRect = el.getBoundingClientRect();
+    const zoneRect = zoneEl.getBoundingClientRect();
+    
+    // Calculate how much of the badge overlaps with this zone
+    const overlapLeft = Math.max(badgeRect.left, zoneRect.left);
+    const overlapRight = Math.min(badgeRect.right, zoneRect.right);
+    const overlapTop = Math.max(badgeRect.top, zoneRect.top);
+    const overlapBottom = Math.min(badgeRect.bottom, zoneRect.bottom);
+    
+    const overlapWidth = Math.max(0, overlapRight - overlapLeft);
+    const overlapHeight = Math.max(0, overlapBottom - overlapTop);
+    const overlapArea = overlapWidth * overlapHeight;
+    const badgeArea = badgeRect.width * badgeRect.height;
+    
+    // If more than 50% of the badge is in this zone, assign it here
+    if (overlapArea > badgeArea * 0.5) {
+      el.dataset.zone = zoneEl.dataset.zone;
+      el.dataset.lastX = el.style.left;
+      el.dataset.lastY = el.style.top;
+      el.classList.remove('inParking');
+      el.style.zIndex = Date.now();
+      return true;
+    }
+    
+    return false;
+  }
+  function settle(el){
+    const pt=center(el), targets=[...document.querySelectorAll('.zone'),$('#parkingPad'),$('#partnerArea'),$('#helpArea')];
+    let landed=false;
+    
+    // For completely free placement, just determine which zone the badge belongs to
+    for(const t of targets){
+      if(t.id==='parkingPad'){
+        // Check if badge is mostly in parking area
+        const badgeRect = el.getBoundingClientRect();
+        const parkingRect = t.getBoundingClientRect();
+        const overlapLeft = Math.max(badgeRect.left, parkingRect.left);
+        const overlapRight = Math.min(badgeRect.right, parkingRect.right);
+        const overlapTop = Math.max(badgeRect.top, parkingRect.top);
+        const overlapBottom = Math.min(badgeRect.bottom, parkingRect.bottom);
+        const overlapWidth = Math.max(0, overlapRight - overlapLeft);
+        const overlapHeight = Math.max(0, overlapBottom - overlapTop);
+        const overlapArea = overlapWidth * overlapHeight;
+        const badgeArea = badgeRect.width * badgeRect.height;
+        
+        if (overlapArea > badgeArea * 0.5) {
+          el.dataset.zone='parking';
+          el.dataset.lastX=el.style.left; el.dataset.lastY=el.style.top;
+          el.classList.add('inParking');
+          landed=true; break;
+        }
+      }else if(t.id==='partnerArea' || t.id==='helpArea'){
+        // Check if badge is mostly in helper area - allow placement anywhere in the area
+        const badgeRect = el.getBoundingClientRect();
+        const areaRect = t.getBoundingClientRect();
+        const overlapLeft = Math.max(badgeRect.left, areaRect.left);
+        const overlapRight = Math.min(badgeRect.right, areaRect.right);
+        const overlapTop = Math.max(badgeRect.top, areaRect.top);
+        const overlapBottom = Math.min(badgeRect.bottom, areaRect.bottom);
+        const overlapWidth = Math.max(0, overlapRight - overlapLeft);
+        const overlapHeight = Math.max(0, overlapBottom - overlapTop);
+        const overlapArea = overlapWidth * overlapHeight;
+        const badgeArea = badgeRect.width * badgeRect.height;
+        
+        // If any part of the badge is in the helper area, allow placement
+        if (overlapArea > 0) {
+          el.dataset.zone = t.id === 'partnerArea' ? 'partner' : 'help';
+          el.dataset.lastX=el.style.left; el.dataset.lastY=el.style.top;
+          el.classList.remove('inParking');
+          el.style.zIndex = Date.now();
+          landed=true; break;
+        }
+      }else{
+        // Check if badge is mostly in response zone
+        const badgeRect = el.getBoundingClientRect();
+        const zoneRect = t.getBoundingClientRect();
+        const overlapLeft = Math.max(badgeRect.left, zoneRect.left);
+        const overlapRight = Math.min(badgeRect.right, zoneRect.right);
+        const overlapTop = Math.max(badgeRect.top, zoneRect.top);
+        const overlapBottom = Math.min(badgeRect.bottom, zoneRect.bottom);
+        const overlapWidth = Math.max(0, overlapRight - overlapLeft);
+        const overlapHeight = Math.max(0, overlapBottom - overlapTop);
+        const overlapArea = overlapWidth * overlapHeight;
+        const badgeArea = badgeRect.width * badgeRect.height;
+        
+        if (overlapArea > badgeArea * 0.5) {
+          el.dataset.zone = t.dataset.zone;
+          el.dataset.lastX=el.style.left; el.dataset.lastY=el.style.top;
+          el.classList.remove('inParking');
+          el.style.zIndex = Date.now();
+          landed=true; break;
+        }
+      }
+    }
+    
+    // Always allow the badge to stay where it was dropped, even if not in a recognized zone
+    if(!landed){
+      // Keep the badge where it was dropped, just update its last position
+      el.dataset.lastX=el.style.left; el.dataset.lastY=el.style.top;
+      el.style.zIndex = Date.now();
+    }
+    stats();
+  }
+  function stats(){
+    const placed=$$('.badge:not(.inParking)').filter(b=>b.dataset.zone);
+    const absent=$$('.badge.inParking').filter(b=>!b.textContent.includes('Mr. Cushman'));
+    $('#placedCount').textContent='Placed: '+placed.length;
+    $('#absentCount').textContent='Absent (not placed): '+absent.length;
+  }
+
+  // ---------- random picker ----------
+  function weekKey(d=new Date()){const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-day);const yearStart=new Date(Date.UTC(date.getUTCFullYear(),0,1));const weekNo=Math.ceil((((date-yearStart)/86400000)+1)/7);return date.getUTCFullYear()+'-W'+String(weekNo).padStart(2,'0')}
+  function ensureWeek(){const cur=weekKey();const s=load('mxq_week'); if(s!==cur){save('mxq_week',cur);save('mxq_picked',[]); pickedSet.clear()} else {pickedSet=new Set(load('mxq_picked',[]))}}
+  function persistPicked(){save('mxq_picked',Array.from(pickedSet))}
+  function randomPick(){
+    console.log('randomPick function called');
+    try {
+      // Get all students (not in parking, excluding Mr. Cushman)
+    const allStudents = badges.filter(b => 
+      b.dataset.ignore !== 'true' && 
+      !b.textContent.includes('Mr. Cushman')
+    );
+    
+    // Get placed students (not in parking) - includes all students outside parking lot
+    const placedStudents = allStudents.filter(b => b.dataset.zone !== 'parking' && b.dataset.zone !== undefined);
+    
+    // Determine which students to select from
+    let base;
+    if(placedStudents.length === 0) {
+      // If no students are placed (all in parking), select from all students
+      base = allStudents;
+    } else {
+      // If some students are placed, select only from those outside parking lot
+      base = placedStudents;
+    }
+    
+    let pool=base.filter(b=>!pickedSet.has(b.textContent.trim()));
+    if(pool.length===0){pickedSet.clear();persistPicked();pool=base.slice(); if(pool.length===0){toast('No students to pick from.'); return;} toast('New round this week!')}
+    
+    // Shuffle the pool to make selection truly random
+    pool = pool.sort(() => Math.random() - 0.5);
+    
+    pool.forEach(b=>b.classList.remove('spinning','winner'));
+    const rounds=Math.floor((Math.max(24,6+pool.length*2)*1.5)*0.75), baseDelay=40; let i=0;
+    // === COIN TICK (sound-alike) ===
+    // progress helper you already have: i / rounds  (0..1)
+    function tick() {
+      try {
+        const progress = (typeof i !== "undefined" && typeof rounds !== "undefined") ? (i / Math.max(1, rounds)) : 0;
+
+        // Tick that sounds like SMB3 coin; we modulate pitch & tiny jitter.
+        const easing = (t)=>1-Math.pow(1-t,3); // easeOutCubic for rate drop
+        const rate = 1.12 - easing(progress)*0.28; // 1.12 → ~0.84
+        const jitterCents = (Math.random()*10 - 5); // ±5 cents
+        
+        SFX.playCoin({ volume: 0.85, rate: Math.max(0.75, rate), detune: jitterCents });
+      } catch {}
+    }
+    function win(){try{const c=new (window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.value=620;g.gain.setValueAtTime(0.001,c.currentTime);g.gain.exponentialRampToValueAtTime(0.12,c.currentTime+0.02);g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+0.5);o.connect(g).connect(c.destination);o.start();o.stop(c.currentTime+0.55);setTimeout(()=>c.close(),600)}catch{}}
+    function step(){
+      console.log('Step function called, i:', i, 'rounds:', rounds, 'pool length:', pool.length);
+      pool.forEach(b=>b.classList.remove('spinning'));
+      const idx=i%pool.length; pool[idx].classList.add('spinning'); tick(); i++;
+      const p=i/rounds, d=baseDelay+p*p*260;
+      if(i<rounds) setTimeout(step,d); else{
+        console.log('Winner selection reached!');
+        pool.forEach(b=>b.classList.remove('spinning','winner'));
+        const w=pool[(i-1)%pool.length]; w.classList.add('winner'); win();
+        const z=w.dataset.zone; let ans=''; const zEl=document.querySelector(`.zone[data-zone="${z}"] h3`); if(zEl) ans=zEl.textContent.trim();
+        const name=w.textContent.trim(); pickedSet.add(name); persistPicked(); setTimeout(()=>{w.classList.remove('winner'); stats()},120);
+        console.log('Setting winner text to:', name);
+        $('#winnerText').textContent=name; $('#winnerText').style.color='#22c55e'; 
+        
+        // Check if student is in parking lot or in a grouped response area
+        const isInParking = z === 'parking';
+        const isInGroupedResponse = z === '0' || z === 'partner' || z === 'help';
+        
+        if(isInParking || isInGroupedResponse) {
+          // Student is in parking lot or grouped response - just say "please explain your answer"
+          $('#winnerSub').textContent='please explain your answer.';
+        } else {
+          // Student is in a regular response zone - show the specific response
+          $('#winnerSub').textContent=`please explain your answer: ${ans||'your choice'}`;
+        }
+        
+        $('#winnerModal').classList.add('show');
+        
+        // Add celebration effects
+        console.log('Triggering celebration effects for winner:', name);
+        createConfetti();
+        applauseFanfare();
+      }
+    }
+    step();
+    } catch (error) {
+      console.error('Error in randomPick function:', error);
+    }
+  }
+  $('#randomBtn').onclick=()=>{
+    alert('Random button clicked!');
+    console.log('Random button clicked!');
+    randomPick();
+  }; 
+  $('#closeWinner').onclick=()=>{
+    $('#winnerModal').classList.remove('show');
+  };
+
+  // ---------- AI (Gemini) ----------
+  const GEMINI_MODEL_DEFAULT='gemini-2.0-flash';
+  // API Keys - Main and 2 Backups
+  const API_KEYS = {
+    main: 'AIzaSyDpx9ITK7RRlxYgbVaF_gkDJAAdmkjBzoQ',
+    BU1: 'AIzaSyAiH3K8dV-fQ5sRskV5elkw3zGj2UMAtTM',
+    BU2: 'AIzaSyAqBvW8uSr6ie9PkM9XDL3zEMCjy07eCoY'
+  };
+  
+  // Token tracking for each key
+  const TOKEN_LIMITS = {
+    main: 200,
+    BU1: 200,
+    BU2: 200
+  };
+  
+  function getTokenUsage(keyName) {
+    const usage = load(`mxq_token_usage_${keyName}`) || 0;
+    return usage;
+  }
+  
+  function incrementTokenUsage(keyName) {
+    const currentUsage = getTokenUsage(keyName);
+    const newUsage = currentUsage + 1;
+    save(`mxq_token_usage_${keyName}`, newUsage);
+    return newUsage;
+  }
+  
+  function setTokenUsage(keyName, usage) {
+    save(`mxq_token_usage_${keyName}`, usage);
+    updateTokenProgress();
+  }
+  
+  function simulateRateLimit(keyName) {
+    localStorage.setItem('mxq_last_ai_error', 'Daily quota exceeded (200 requests). Resets at midnight Pacific Time.');
+    localStorage.setItem('mxq_last_failed_key', keyName);
+    updateTokenProgress();
+    console.log('Simulated rate limit for key:', keyName);
+  }
+  
+  function getTokenPercentage(keyName) {
+    const usage = getTokenUsage(keyName);
+    const limit = TOKEN_LIMITS[keyName];
+    return Math.max(0, Math.min(100, ((limit - usage) / limit) * 100));
+  }
+  
+  function updateTokenProgress() {
+    const activeKey = getActiveKeyName();
+    const usage = getTokenUsage(activeKey);
+    const limit = TOKEN_LIMITS[activeKey];
+    const remaining = Math.max(0, limit - usage);
+    const percentage = Math.max(0, Math.min(100, (remaining / limit) * 100));
+    
+    const progressFill = document.getElementById('tokenProgressFill');
+    const progressText = document.getElementById('tokenProgressText');
+    const keyName = document.getElementById('tokenKeyName');
+    
+    if(progressFill && progressText && keyName) {
+      // Set key name
+      keyName.textContent = activeKey;
+      
+      // Check if this key is rate limited by looking at the AI status
+      const aiStatus = load('mxq_ai_status');
+      const lastError = localStorage.getItem('mxq_last_ai_error');
+      const lastFailedKey = localStorage.getItem('mxq_last_failed_key');
+      const isRateLimited = lastError && lastError.includes('quota exceeded') && lastFailedKey === activeKey;
+      
+      console.log('Token progress debug:', {
+        activeKey,
+        usage,
+        remaining,
+        percentage,
+        lastError,
+        lastFailedKey,
+        isRateLimited,
+        aiStatusOk: aiStatus ? aiStatus.ok : 'no status'
+      });
+      
+      if(isRateLimited) {
+        // Rate limited - show empty red bar
+        progressFill.style.width = '0%';
+        progressFill.style.background = '#ef4444'; // Red
+        progressText.textContent = '0';
+        progressFill.style.border = '1px solid #dc2626'; // Red border for emphasis
+        console.log('Showing rate-limited (empty red bar)');
+      } else {
+        // Not rate limited - show actual usage
+        progressFill.style.width = `${percentage}%`;
+        progressFill.style.border = 'none'; // Remove border for normal state
+        
+        // Set progress color based on remaining tokens
+        if(remaining === 0) {
+          progressFill.style.background = '#ef4444'; // Red for empty
+        } else if(remaining < 40) {
+          progressFill.style.background = '#ef4444'; // Red for low
+        } else if(remaining < 100) {
+          progressFill.style.background = '#f59e0b'; // Yellow for medium
+        } else {
+          progressFill.style.background = '#22c55e'; // Green for good
+        }
+        
+        progressText.textContent = remaining;
+        console.log('Showing normal progress:', remaining, 'tokens remaining');
+      }
+    }
+  }
+  
+  const getKey = () => {
+    const activeKey = load('mxq_active_key') || 'main';
+    return API_KEYS[activeKey] || API_KEYS.main;
+  };
+  
+  const getActiveKeyName = () => {
+    return load('mxq_active_key') || 'main';
+  };
+  const getModel = () => {
+    // Force use of the working model for now
+    return 'gemini-2.0-flash';
+  };
+  // --- Ontario G1–6 quick taxonomy (extend as needed) ---
+  const ONTARIO = {
+    subjects: {
+      "Math": {
+        strands: {
+          "Number": ["counting & place value","addition/subtraction","multiplication/division (intro)","fractions (intro)"],
+          "Patterning & Algebra": ["patterns","variables (gr. 5–6)"],
+          "Measurement": ["length, mass, capacity","time, perimeter, area"],
+          "Geometry & Spatial Sense": ["2D/3D shapes","location & movement"],
+          "Data": ["collect/organize","read/interpret","probability (intro)"]
+        }
+      },
+      "Language": {
+        strands: {
+          "Oral Communication": ["listening","speaking","presenting"],
+          "Reading": ["comprehension","inferencing","vocabulary","text features"],
+          "Writing": ["idea generation","draft/revise/edit","conventions"],
+          "Media Literacy": ["purpose/audience","representation","techniques"]
+        }
+      },
+      "Science": {
+        strands: {
+          "Life Systems": ["needs of living things","habitats","human body (gr.5–6)"],
+          "Matter & Energy": ["properties of matter","energy forms","light & sound"],
+          "Structures & Mechanisms": ["materials","forces & motion","simple machines"],
+          "Earth & Space": ["daily/seasonal changes","soil/rocks","space (gr.6)"]
+        }
+      },
+      "Social Studies": {
+        strands: {
+          "Heritage & Identity": ["local communities","early societies","indigenous perspectives"],
+          "People & Environments": ["roles & responsibilities","resources & sustainability","global connections"]
+        }
+      },
+      "Phys-Ed": { strands: { "Active Living": [], "Movement Skills": [], "Healthy Living": [] } },
+      "Visual Arts": { strands: { "Creating/Presenting": [], "Reflecting/Responding": [] } },
+      "Music": { strands: { "Elements": [], "Creating/Performing": [], "Responding": [] } },
+      "Drama": { strands: { "Creating/Presenting": [], "Reflecting/Responding": [] } },
+      "Dance": { strands: { "Creating/Presenting": [], "Reflecting/Responding": [] } },
+      "General": { strands: { "Cross-Curricular": [] } }
+    }
+  };
+
+  // Bloom's → student-friendly verbs (Ontario tone)
+  const BLOOMS_VERBS = {
+    "Remember": ["list","identify","name","recall","label"],
+    "Understand": ["describe","explain","summarize","retell","classify"],
+    "Apply": ["use","solve","demonstrate","model","show how"],
+    "Analyze": ["compare","contrast","sort","categorize","find patterns"],
+    "Evaluate": ["choose & justify","defend","critique","decide with reasons"],
+    "Create": ["design","invent","compose","plan","build"]
+  };
+
+  // Ontario Learning Skills → prompt nudges
+  const LEARNING_SKILL_NUDGES = {
+    "Responsibility": "Include a self-check about meeting expectations respectfully and safely.",
+    "Organization": "Include a step about planning materials/time and next steps.",
+    "Independent Work": "Prompt for quiet think time and personal goal-setting.",
+    "Collaboration": "Invite partner talk and turn-taking with accountable talk stems.",
+    "Initiative": "Ask for a personal connection or an optional extension challenge.",
+    "Self-Regulation": "Add a strategy check: What will you do if you feel stuck?"
+  };
+
+  // === SEL topics for Grades 1–6 (Second Step–style) ===
+  const SEL_TOPICS = {
+    domains: {
+      "Skills for Learning": {
+        g1_2: [
+          "listening with attention",
+          "focusing attention",
+          "self-talk to stay on task",
+          "being assertive"
+        ],
+        g3_4: [
+          "ignoring distractions",
+          "self-talk to follow multi-step directions",
+          "goal steps and feedback",
+          "asking for help"
+        ],
+        g5_6: [
+          "planning and prioritizing",
+          "sustained attention",
+          "self-monitoring work",
+          "advocating respectfully"
+        ],
+        promptNudge:
+          "Include a quick routine (e.g., focus attention, self-talk, assertive voice) students can practice while answering."
+      },
+
+      "Empathy": {
+        g1_2: [
+          "identifying feelings",
+          "same and different feelings",
+          "showing care"
+        ],
+        g3_4: [
+          "perspective-taking",
+          "empathy in group work",
+          "kind responses"
+        ],
+        g5_6: [
+          "multiple perspectives in conflict",
+          "empathy + boundaries",
+          "inclusive language"
+        ],
+        promptNudge:
+          "Invite students to notice feelings, perspectives, and caring actions connected to the task."
+      },
+
+      "Emotion Management": {
+        g1_2: [
+          "Calm-Down Steps",
+          "strong feelings at school"
+        ],
+        g3_4: [
+          "triggers & body signals",
+          "Calm-Down Steps"
+        ],
+        g5_6: [
+          "reframing thoughts",
+          "plan to manage stress before tasks"
+        ],
+        promptNudge:
+          "Add a quick Calm-Down routine before/after thinking, and a check-in about body clues."
+      },
+
+      "Problem Solving": {
+        g1_2: [
+          "Say, Think, Explore, Pick"
+        ],
+        g3_4: [
+          "Say, Think, Explore, Pick",
+          "brainstorm then choose"
+        ],
+        g5_6: [
+          "Say, Think, Explore, Pick",
+          "consider short- and long-term effects"
+        ],
+        promptNudge:
+          "Have students use S-T-E-P (Say, Think, Explore, Pick) while solving the question."
+      },
+
+      "Bullying Prevention": {
+        g1_2: [
+          "recognize, report, refuse",
+          "bystander to upstander"
+        ],
+        g3_4: [
+          "reporting vs tattling",
+          "safe upstander words"
+        ],
+        g5_6: [
+          "digital citizenship & kindness",
+          "supporting targets safely"
+        ],
+        promptNudge:
+          "If relevant, include a safe upstander step and clarify when to get adult help."
+      },
+
+      "Growth Mindset": {
+        g1_2: [
+          "yet language",
+          "small practice steps"
+        ],
+        g3_4: [
+          "effort + strategy talk",
+          "tracking progress"
+        ],
+        g5_6: [
+          "reflecting on strategies",
+          "setting and revising goals"
+        ],
+        promptNudge:
+          "Add a brief reflection about effort, strategies, or a next step toward a goal."
+      }
+    }
+  };
+
+  const bloomsVerb=lv=>({remember:'show what you know',understand:'explain your thinking',apply:'use your skills',analyze:'compare or find a pattern',evaluate:'choose and justify',create:'plan or design'})[(lv||'apply').toLowerCase()]||'explain your thinking';
+
+  // Helper functions for Ontario prompt builder
+  function getFiltersFromDOM() {
+    return {
+      grade: document.getElementById('gradeInput')?.value || "2",
+      subject: document.getElementById('subjectInput')?.value || "General",
+      blooms: document.getElementById('bloomsInput')?.value || "Evaluate",
+      learningSkill: document.getElementById('lsInput')?.value || "General",
+      sel: document.getElementById('selInput')?.value || "",
+      keywords: (document.getElementById('keywordInput')?.value || "").trim(),
+      concise: !!document.getElementById('conciseToggle')?.checked
+    };
+  }
+
+  function pickBloomsVerb(level) {
+    const list = BLOOMS_VERBS[level] || BLOOMS_VERBS["Understand"];
+    return list[Math.floor(Math.random()*list.length)];
+  }
+
+  function pickSubjectStrand(subject) {
+    const s = ONTARIO.subjects[subject]?.strands || ONTARIO.subjects["General"].strands;
+    const keys = Object.keys(s);
+    if (!keys.length) return {name:"Cross-Curricular", topic:""};
+    const strand = keys[Math.floor(Math.random()*keys.length)];
+    const topics = s[strand];
+    const topic = topics.length ? topics[Math.floor(Math.random()*topics.length)] : "";
+    return {name: strand, topic};
+  }
+
+  function selBandForGrade(gradeStr) {
+    const g = parseInt(String(gradeStr || "3"), 10);
+    if (g <= 2) return "g1_2";
+    if (g <= 4) return "g3_4";
+    return "g5_6";
+  }
+
+  function getSelNudge(selValue) {
+    if (!selValue) return "";
+    const [domain] = selValue.split(" — ");
+    const nudge = SEL_TOPICS.domains[domain]?.promptNudge || "";
+    return `SEL focus: ${selValue}. ${nudge}`;
+  }
+
+  function populateSELDropDown() {
+    const grade = document.getElementById('gradeInput')?.value || "3";
+    const band = selBandForGrade(grade);
+    const sel = document.getElementById('selInput');
+    if (!sel) return;
+
+    // clear existing (keep the first placeholder option)
+    sel.length = 1;
+
+    Object.entries(SEL_TOPICS.domains).forEach(([domain, cfg]) => {
+      // Add domain as a header option
+      const domainOpt = document.createElement('option');
+      domainOpt.value = "";
+      domainOpt.textContent = domain;
+      domainOpt.disabled = true;
+      domainOpt.style.fontWeight = "bold";
+      sel.appendChild(domainOpt);
+      
+      // Add topics without indentation
+      (cfg[band] || []).forEach(topic => {
+        const opt = document.createElement('option');
+        opt.value = `${domain} — ${topic}`;
+        opt.textContent = topic;
+        sel.appendChild(opt);
+      });
+    });
+  }
+
+  /**
+   * Returns a single string you can send to your AI model.
+   * It bakes in: Grade (Ontario), Subject & Strand, Bloom's, Learning Skill, and your keywords.
+   */
+  function buildOntarioPrompt() {
+    const f = getFiltersFromDOM();
+    const verb = pickBloomsVerb(f.blooms);
+    const {name: strand, topic} = pickSubjectStrand(f.subject);
+    const lsLine = f.learningSkill !== "General" ? LEARNING_SKILL_NUDGES[f.learningSkill] : "";
+    const keyLine = f.keywords ? `Focus on: ${f.keywords}.` : "";
+    const selLine = getSelNudge(f.sel);
+    const lengthRule = f.concise
+      ? "Keep question ≤ 12 words; answers ≤ 4 words each."
+      : "Keep question ≤ 15 words; answers ≤ 6 words each.";
+
+    // A friendly, Ontario-aligned "system" style prompt for question generation
+    const prompt = `
+You are a helpful Ontario elementary teacher assistant.
+Create ONE student-facing question aligned to Ontario ${f.subject} (Grades 1–6), for Grade ${f.grade}, strand: ${strand}${topic?` (topic: ${topic})`:""}.
+Cognitive demand: Bloom's "${f.blooms}" — use a student-friendly verb like "${verb}".
+${keyLine}
+${selLine}
+Constraints:
+- Match Grade ${f.grade} reading level; use simple sentences and familiar vocabulary.
+- Include any necessary everyday contexts culturally respectful to diverse Ontario classrooms.
+- ${lengthRule}
+- If the response mode is multiple-choice (your app handles this), ensure all options are plausible and only one is clearly best.
+- Add a short "success criterion" in teacher voice: "I can …" (one line).
+- CRITICAL: Do NOT include answer choices (A, B, C, D) in the question text. The question should be a standalone prompt without any multiple choice options listed.
+- Keep questions short and direct - focus on the core prompt without extra explanation.
+
+Learning Skills link: ${lsLine || "Optionally include a reflective mini-prompt about learning skills if it fits naturally."}
+
+Output JSON:
+{
+  "question": "<short, direct question without answer choices - max 15 words>",
+  "success_criterion": "I can …",
+  "teacher_note": "Why this fits Ontario Grade ${f.grade} (${f.subject}—${strand}${topic?`—${topic}`:""}; Bloom's: ${f.blooms})."
+}
+  `.trim();
+
+    return prompt;
+  }
+
+  function buildPrompt({count,kw,grade,subject,ls,blooms,concise,mode}){
+    // Use the new Ontario prompt builder
+    const ontarioPrompt = buildOntarioPrompt();
+    
+    // Add the count and mode information to the existing prompt
+    const isWyr = mode === 'wyr';
+    const additionalConstraints = `
+${isWyr ? 'FORMAT: Would You Rather (2 choices)' : ''}
+- Provide EXACTLY ${count} choices. If ${count} is 3 or 4, the LAST choice MUST be "📝 Other (explain)".
+- Choices should be broad strategies/frames that encourage critical thinking (not hyper-specific facts).
+- DO NOT include backticks, markdown, explanations, or any fields other than "question" and "choices".
+- CRITICAL: The question field should contain ONLY the question text, NOT the answer choices. Answer choices go in the "choices" array.
+${isWyr ? '- For "Would You Rather" format: Start question with "Would you rather..." and provide exactly 2 contrasting choices' : ''}
+`.trim();
+    
+    const prompt = ontarioPrompt + '\n\n' + additionalConstraints;
+    
+    console.log('Built Ontario prompt:', prompt);
+    return prompt;
+  }
+  function parseJSONLenient(txt){
+    if(!txt) return null;
+    let cleaned = txt.replace(/```[\s\S]*?```/g, m => m.replace(/```(?:json)?/gi,'').replace(/```/g,'')).replace(/```(?:json)?/gi,'').replace(/```/g,'').trim();
+    try { return JSON.parse(cleaned); } catch {}
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if(m){ try { return JSON.parse(m[0]); } catch {} }
+    return null;
+  }
+  function addEmojisUnique(arr){
+    const pool=["🤝","🎲","📖","🔄","🎨","☀️","👫","🏃","🎵","🎭","🍎","🌎","🧩","✏️","🖌️","⚽","🎶","🦋","🚀","🪴","🕊️","🔍","🧠","💡","🛠️","🗺️","🧪","📐","🧮","🗣️","📝"];
+    const hints=[[/(read|story|book|text)/i,"📖"],[/(friend|kind|include|help)/i,"🤝"],[/(music|song|rhythm)/i,"🎵"],[/(art|draw|paint|colour|color)/i,"🎨"],[/(move|exercise|run|sport)/i,"🏃"],[/(pattern|sequence)/i,"🔄"],[/(science|experiment|observe)/i,"🧪"],[/(map|timeline|community)/i,"🗺️"],[/(math|count|shape|measure)/i,"🧮"]];
+    const used=new Set();
+    return arr.map((c)=>{
+      if(/other/i.test(c)) return "📝 "+c.replace(/^📝\s*/i,'');
+      let emo=""; for(const [re,e] of hints){ if(re.test(c)&&!used.has(e)){ emo=e; break; } }
+      if(!emo){ emo = pool.find(e=>!used.has(e)&&e!=="📝") || "🎯"; }
+      used.add(emo); return `${emo} ${String(c).replace(/^[^\w\d]+/,'').trim()}`;
+    });
+  }
+  function postConcise(obj, concise){
+    if(!concise) return obj;
+    const shortQ = obj.question.replace(/\s+/g,' ').split(' ').slice(0,7).join(' ');
+    const shortC = obj.choices.map(c=>c.replace(/\s+/g,' ').split(' ').slice(0,4).join(' '));
+    return {question:shortQ.trim(), choices:shortC};
+  }
+  async function geminiQ({count,kw,grade,subject,ls,blooms,concise}){
+    const key=getKey();
+    if(!key) throw new Error('No API key');
+    
+    console.log('geminiQ called with:', {count, kw, grade, subject, ls, blooms, concise});
+    console.log('Using key length:', key.length);
+    
+    // Get the current mode for the prompt
+    const modeSel = getSelectedResponseMode();
+    console.log('modeSel value:', modeSel);
+    
+    // Use only the working model
+    const modelsToTry = ['gemini-2.0-flash'];
+    let obj0 = null; // Declare obj0 outside the loop
+    let currentModel = 'gemini-2.0-flash'; // Track the current model
+    
+    for(const tryModel of modelsToTry) {
+      currentModel = tryModel; // Update the current model
+      try {
+        console.log('Trying model:', tryModel);
+        console.log('About to call buildPrompt with modeSel:', modeSel);
+        const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(tryModel)}:generateContent?key=${encodeURIComponent(key)}`;
+        const prompt=buildPrompt({count,kw,grade,subject,ls,blooms,concise,mode:modeSel});
+        
+        console.log('Making request to:', url);
+        const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}]})});
+        console.log('Response status:', res.status);
+        
+        if(res.status === 429) {
+          console.log(`Rate limit hit for model ${tryModel}, trying next model...`);
+          console.log('Rate limit detected - this model has reached its quota');
+          localStorage.setItem('mxq_last_ai_error', `Daily quota exceeded (200 requests). Resets at midnight Pacific Time.`);
+          localStorage.setItem('mxq_last_failed_key', getActiveKeyName());
+          updateAIWarning('Daily Quota Exceeded - Resets Tomorrow', true);
+          // Clear the AI status to show it's not working
+          localStorage.removeItem('mxq_ai_status');
+          
+          // Try auto-switching to backup key
+          console.log('Attempting auto-switch to backup key...');
+          const switchResult = await autoSwitchToBackup();
+          if(switchResult) {
+            console.log('Auto-switch successful, retrying with new key...');
+            // Retry the request with the new key
+            const newKey = getKey();
+            const newUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(tryModel)}:generateContent?key=${encodeURIComponent(newKey)}`;
+            const newRes = await fetch(newUrl, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({contents: [{role: 'user', parts: [{text: prompt}]}]})});
+            
+            if(newRes.ok) {
+              const newData = await newRes.json();
+              const newTxt = (newData?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join(' ').trim();
+              obj0 = parseJSONLenient(newTxt);
+              if(obj0 && Array.isArray(obj0.choices)) {
+                console.log('Success with auto-switched key');
+                incrementTokenUsage(getActiveKeyName());
+                break;
+              }
+            }
+          }
+          
+          continue; // Try next model
+        } else if(res.status === 403) {
+          console.log('Invalid API key, trying next model...');
+          console.log('403 error - API key may be invalid or quota exceeded');
+          localStorage.setItem('mxq_last_ai_error', `403 error for ${tryModel}`);
+          updateAIWarning('Invalid API Key', true);
+          // Clear the AI status to show it's not working
+          localStorage.removeItem('mxq_ai_status');
+          continue; // Try next model
+        } else if(!res.ok) {
+          console.log(`HTTP error ${res.status} for model ${tryModel}, trying next model...`);
+          console.log(`HTTP ${res.status} error - model may be unavailable`);
+          localStorage.setItem('mxq_last_ai_error', `HTTP ${res.status} error for ${tryModel}`);
+          updateAIWarning(`HTTP Error ${res.status}`, true);
+          // Clear the AI status to show it's not working
+          localStorage.removeItem('mxq_ai_status');
+          continue; // Try next model
+        }
+        const data=await res.json();
+        console.log('Response data:', data);
+        const txt=(data?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join(' ').trim();
+        console.log('Extracted text:', txt);
+        localStorage.setItem('mxq_ai_raw', txt);
+        obj0=parseJSONLenient(txt); // Assign to the outer variable
+        console.log('Parsed object:', obj0);
+        if(!obj0 || !Array.isArray(obj0.choices)) throw new Error('Bad AI JSON - missing or invalid choices array');
+        
+        // If we get here, the request was successful
+        console.log('Success with model:', tryModel);
+        
+        // Increment token usage for successful generation
+        incrementTokenUsage(getActiveKeyName());
+        
+        break;
+      } catch(e) {
+        console.log('Error with model', tryModel, ':', e.message);
+        if(tryModel === modelsToTry[modelsToTry.length - 1]) {
+          // This was the last model to try
+          throw e;
+        }
+        // Try next model
+        continue;
+      }
+    }
+
+    // normalize choices + emojis + policy for Other
+    const want=count;
+    const nonOther=obj0.choices.filter(Boolean).filter(c=>!(/other/i.test(c)));
+    if(want>=3){
+      while(nonOther.length<want-1) nonOther.push('Share another idea');
+      obj0.choices=addEmojisUnique(nonOther.slice(0,want-1).concat('Other (explain)'));
+    } else {
+      while(nonOther.length<2) nonOther.push('Share another idea');
+      obj0.choices=addEmojisUnique(nonOther.slice(0,2));
+    }
+
+    const obj = postConcise(obj0, concise);
+
+    if(typeof obj.question!=='string' || !obj.question.trim()){
+      const verb=({Remember:'show what you know',Understand:'explain your thinking',Apply:'use your skills',Analyze:'compare or find a pattern',Evaluate:'choose and justify',Create:'plan or design'}[blooms]||'explain your thinking');
+      obj.question = (kw?`How will you ${verb} about ${kw} today?`:(subject!=='General'?`How will you ${verb} in ${subject} today?`:`What is one smart way you can ${verb} today?`));
+      localStorage.setItem('mxq_ai_lastgen', JSON.stringify({used:'gemini',questionSource:'fallback',time:Date.now(),model:currentModel}));
+    } else {
+      localStorage.setItem('mxq_ai_lastgen', JSON.stringify({used:'gemini',questionSource:'model',time:Date.now(),model:currentModel}));
+    }
+    return obj;
+  }
+  
+  // API key switcher functions
+  function switchToKey(keyName) {
+    save('mxq_active_key', keyName);
+    localStorage.removeItem('mxq_ai_status'); // Clear status to force retest
+    localStorage.removeItem('mxq_last_failed_key'); // Clear failed key tracking
+    toast(`Switched to ${keyName} API key`);
+    aiStatus();
+    updateKeyButtons();
+    updateTokenProgress();
+  }
+
+  // Auto-switch to backup key if current key fails
+  async function autoSwitchToBackup() {
+    const currentKey = getActiveKeyName();
+    const keys = ['main', 'BU1', 'BU2'];
+    const currentIndex = keys.indexOf(currentKey);
+    
+    // Try next key in sequence
+    for(let i = 1; i <= 2; i++) {
+      const nextIndex = (currentIndex + i) % 3;
+      const nextKey = keys[nextIndex];
+      
+      console.log(`Auto-switching: trying ${nextKey} (was ${currentKey})`);
+      
+      // Test the next key
+      const testResult = await testSpecificKey(nextKey);
+      if(testResult) {
+        console.log(`Auto-switch successful: ${nextKey} is working`);
+        switchToKey(nextKey);
+        return true;
+      }
+    }
+    
+    console.log('Auto-switch failed: no working keys found');
+    return false;
+  }
+
+  // Test a specific key without switching to it
+  async function testSpecificKey(keyName) {
+    const originalKey = getActiveKeyName();
+    save('mxq_active_key', keyName);
+    
+    try {
+      const key = getKey();
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'test' }] }]
+        })
+      });
+      
+      const success = res.ok;
+      
+      // Restore original key
+      save('mxq_active_key', originalKey);
+      
+      return success;
+    } catch(e) {
+      // Restore original key
+      save('mxq_active_key', originalKey);
+      return false;
+    }
+  }
+  
+  function updateKeyButtons() {
+    const activeKey = getActiveKeyName();
+    console.log('updateKeyButtons called - active key:', activeKey);
+    console.log('localStorage mxq_active_key:', load('mxq_active_key'));
+    
+    // Update button styles
+    const mainBtn = document.getElementById('keyMain');
+    const bu1Btn = document.getElementById('keyBU1');
+    const bu2Btn = document.getElementById('keyBU2');
+    
+    console.log('Found buttons:', {mainBtn: !!mainBtn, bu1Btn: !!bu1Btn, bu2Btn: !!bu2Btn});
+    
+    if(mainBtn) {
+      const isMainActive = activeKey === 'main';
+      mainBtn.style.background = isMainActive ? '#22c55e' : '#6b7280';
+      mainBtn.style.color = isMainActive ? 'white' : '#d1d5db';
+      mainBtn.style.border = isMainActive ? '2px solid #16a34a' : 'none';
+      console.log('Main button:', isMainActive ? 'GREEN' : 'GRAY', 'activeKey:', activeKey, 'isMainActive:', isMainActive);
+    }
+    if(bu1Btn) {
+      const isBU1Active = activeKey === 'BU1';
+      bu1Btn.style.background = isBU1Active ? '#22c55e' : '#6b7280';
+      bu1Btn.style.color = isBU1Active ? 'white' : '#d1d5db';
+      bu1Btn.style.border = isBU1Active ? '2px solid #16a34a' : 'none';
+      console.log('BU1 button:', isBU1Active ? 'GREEN' : 'GRAY', 'activeKey:', activeKey, 'isBU1Active:', isBU1Active);
+    }
+    if(bu2Btn) {
+      const isBU2Active = activeKey === 'BU2';
+      bu2Btn.style.background = isBU2Active ? '#22c55e' : '#6b7280';
+      bu2Btn.style.color = isBU2Active ? 'white' : '#d1d5db';
+      bu2Btn.style.border = isBU2Active ? '2px solid #16a34a' : 'none';
+      console.log('BU2 button:', isBU2Active ? 'GREEN' : 'GRAY', 'activeKey:', activeKey, 'isBU2Active:', isBU2Active);
+    }
+  }
+  
+  function updateQuickSwitchButtons() {
+    const currentModel = load('mxq_ai_model') || 'gemini-2.0-flash';
+    console.log('Updating Quick Switch buttons, current model:', currentModel);
+    
+    // Update Quick Switch button styles
+    const flash2Btn = document.getElementById('model2Flash');
+    const flash1Btn = document.getElementById('model1Flash');
+    const pro1Btn = document.getElementById('model1Pro');
+    
+    if(flash2Btn) {
+      flash2Btn.style.background = currentModel === 'gemini-2.0-flash' ? '#6b7280' : '#374151';
+      flash2Btn.style.color = currentModel === 'gemini-2.0-flash' ? 'white' : '#9ca3af';
+      console.log('2.0 Flash button:', currentModel === 'gemini-2.0-flash' ? 'ACTIVE' : 'INACTIVE');
+    }
+    if(flash1Btn) {
+      flash1Btn.style.background = currentModel === 'gemini-1.5-flash' ? '#6b7280' : '#374151';
+      flash1Btn.style.color = currentModel === 'gemini-1.5-flash' ? 'white' : '#9ca3af';
+      console.log('1.5 Flash button:', currentModel === 'gemini-1.5-flash' ? 'ACTIVE' : 'INACTIVE');
+    }
+    if(pro1Btn) {
+      pro1Btn.style.background = currentModel === 'gemini-1.5-pro' ? '#6b7280' : '#374151';
+      pro1Btn.style.color = currentModel === 'gemini-1.5-pro' ? 'white' : '#9ca3af';
+      console.log('1.5 Pro button:', currentModel === 'gemini-1.5-pro' ? 'ACTIVE' : 'INACTIVE');
+    }
+  }
+  
+  function offlineQ(count,subject,ls,concise){
+    const qs={
+      General:['What is one way you can help our class learn well today? Explain your choice.','How can you show your thinking clearly? Explain your choice.'],
+      Responsibility:['How can you show responsibility during our work time? Explain.'],
+      Organization:['What can you do to stay organized for this task? Explain your choice.'],
+      'Independent Work':['What helps you stay focused when working on your own? Explain.'],
+      Collaboration:['What makes group work go well? Explain your choice.'],
+      Initiative:['What is a way you can take initiative in your learning today? Explain.'],
+      'Self-Regulation':['What will you do if you feel stuck or upset during learning? Explain.']
+    };
+    let q=(qs[ls]||qs.General)[Math.floor(Math.random()*2)];
+    const base={General:['Use a model','Ask a question','Explain with an example','Other (explain)'],
+      Math:['Estimate first','Look for a pattern','Draw a model','Other (explain)'],
+      Language:['Use a detail from the text','Use your own example','Ask a question','Other (explain)'],
+      Science:['Observe','Make a prediction','Test an idea','Other (explain)'],
+      'Social Studies':['Consider different viewpoints','Use a map or timeline','Connect to our community','Other (explain)']};
+    const list=(base[subject]||base.General).slice(0,count>=4?4:count);
+    let choices; if(count>=3){choices=list.slice(0,count-1).concat('Other (explain)')} else {choices=list.slice(0,2)}
+    choices=addEmojisUnique(choices);
+    if(concise){ q=q.split(' ').slice(0,12).join(' '); choices=choices.map(c=>c.split(' ').slice(0,5).join(' ')); }
+    localStorage.setItem('mxq_ai_lastgen', JSON.stringify({used:'offline',questionSource:'offline',time:Date.now()}));
+    return {question:q,choices};
+  }
+  async function getQ(count,kw,grade,subject,ls,blooms,concise){
+    try{
+      const key = getKey();
+      if(!key) {
+        throw new Error('No key');
+      }
+      return await geminiQ(count,kw,grade,subject,ls,blooms,concise);
+    }catch(e){
+      console.log('AI generation failed, falling back to offline:', e.message);
+      return offlineQ(count,subject,ls,concise);
+    }
+  }
+
+  // ---------- settings ----------
+  function toggleAnswerFields(mode){
+    const grid=document.querySelector('.answers-grid'); grid.style.display=(mode==='open')?'none':'grid';
+    const show=n=>$('#a'+n).parentElement.style.display='flex', hide=n=>$('#a'+n).parentElement.style.display='none';
+    show(1);show(2);show(3);show(4);
+    if(mode==='2'){hide(3);hide(4)} 
+    if(mode==='3'){show(3);hide(4)} 
+    if(mode==='4'){show(3);show(4)}
+    if(mode==='wyr'){
+      hide(3);hide(4);
+      // Set default "Would you rather" options
+      $('#a1').value = 'Option A';
+      $('#a2').value = 'Option B';
+    }
+  }
+  function getSelectedResponseMode() {
+    const activeBtn = document.querySelector('.response-btn.active');
+    return activeBtn ? activeBtn.dataset.value : '4';
+  }
+  
+  function setSelectedResponseMode(mode) {
+    document.querySelectorAll('.response-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.value === mode);
+    });
+  }
+  
+  function openSettings(){
+    const s=load('mxq_choices'); $('#qInput').value=s?.q||$('#question').textContent||'';
+    const mode=s?.mode||'4'; setSelectedResponseMode(mode);
+    const cur=s?.choices || Array.from(document.querySelectorAll('.zone h3')).map(h=>h.textContent);
+    ['a1','a2','a3','a4'].forEach((id,i)=> $('#'+id).value=(cur[i]||'').replace(/^(\p{Emoji_Presentation}|\p{Emoji})\s*/u,'')); // allow editing text without emoji
+    $('#gradeInput').value=load('mxq_grade','2'); $('#subjectInput').value=load('mxq_subject','General'); $('#lsInput').value=load('mxq_ls','General'); $('#keywordInput').value=load('mxq_keywords',''); $('#bloomsInput').value=load('mxq_blooms','Evaluate');
+    $('#conciseToggle').checked = !!load('mxq_concise', false);
+    $('#selInput').value=load('mxq_sel','');
+    toggleAnswerFields(mode); $('#settingsModal').classList.add('show'); aiStatus();
+    
+    // Populate SEL dropdown based on current grade
+    populateSELDropDown();
+  }
+  // Response button handlers
+  document.querySelectorAll('.response-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      // Remove active class from all buttons
+      document.querySelectorAll('.response-btn').forEach(b => b.classList.remove('active'));
+      // Add active class to clicked button
+      e.target.classList.add('active');
+      // Toggle answer fields based on selected value
+      toggleAnswerFields(e.target.dataset.value);
+    });
+  });
+
+  // Grade change handler to update SEL dropdown
+  document.getElementById('gradeInput')?.addEventListener('change', populateSELDropDown);
+  
+  // Save SEL value when it changes
+  document.getElementById('selInput')?.addEventListener('change', (e) => {
+    save('mxq_sel', e.target.value);
+  });
+  document.addEventListener('keydown',e=>{ 
+    console.log('Key pressed:', e.key, 'Code:', e.code);
+    // Check if user is typing in an input field
+    const isTyping = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT');
+    
+    if(e.key==='Enter'&&$('#settingsModal').classList.contains('show')){ 
+      if(isTyping) return; 
+      e.preventDefault(); 
+      $('#genBtn').click(); 
+    }
+    
+    // Hotkeys that work without modifiers (only when not typing)
+    if(!isTyping){
+      // R key triggers reset actions
+      if(e.key.toLowerCase()==='r' && !e.ctrlKey && !e.altKey && !e.metaKey){
+        // If settings modal is open, reset filters
+        if($('#settingsModal').classList.contains('show')){
+          $('#resetFiltersBtn').click();
+        }
+        // Always trigger main page reset
+        $('#quickReset').click();
+        // Return to main page and generate new question with defaults
+        setTimeout(() => {
+          setQuestionSafe('Loading...');
+          setResponseModeAndGenerate('2');
+        }, 100);
+      }
+      // G key triggers AI generation
+      if(e.key.toLowerCase()==='g' && !e.ctrlKey && !e.altKey && !e.metaKey){
+        // If settings modal is open, generate with current settings
+        if($('#settingsModal').classList.contains('show')){
+          $('#genBtn').click();
+        } else {
+          // On main page, generate with current saved settings
+          generateWithCurrentSettings();
+        }
+      }
+      // S key opens settings
+      if(e.key.toLowerCase()==='s' && !e.ctrlKey && !e.altKey && !e.metaKey){
+        if(!$('#settingsModal').classList.contains('show')){
+          openSettings();
+        }
+      }
+      // A key opens settings + AI settings
+      if(e.key.toLowerCase()==='a' && !e.ctrlKey && !e.altKey && !e.metaKey){
+        if(!$('#settingsModal').classList.contains('show')){
+          openAISettings();
+        }
+      }
+      // Response number hotkeys
+      if(['1','2','3','4'].includes(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey){
+        const mode = e.key === '1' ? 'open' : e.key;
+        setResponseModeAndGenerate(mode);
+      }
+      // W key for Would You Rather
+      if(e.key.toLowerCase()==='w' && !e.ctrlKey && !e.altKey && !e.metaKey){
+        setResponseModeAndGenerate('wyr');
+      }
+      // T key for timer (main page only)
+      if(e.key.toLowerCase()==='t' && !e.ctrlKey && !e.altKey && !e.metaKey){
+        if(!$('#settingsModal').classList.contains('show')){
+          toggleRun();
+        }
+      }
+      // P key for partner function (main page only)
+      if(e.key.toLowerCase()==='p' && !e.ctrlKey && !e.altKey && !e.metaKey){
+        if(!$('#settingsModal').classList.contains('show')){
+          createPartners();
+        }
+      }
+      
+      // Arrow keys for group size and timer (main page only)
+      if(!$('#settingsModal').classList.contains('show') && !$('#aiModal').classList.contains('show')){
+        // Up/Down arrows for group size
+        if(e.key === 'ArrowUp' && !e.ctrlKey && !e.altKey && !e.metaKey){
+          e.preventDefault();
+          changeGroupSize(1);
+        }
+        if(e.key === 'ArrowDown' && !e.ctrlKey && !e.altKey && !e.metaKey){
+          e.preventDefault();
+          changeGroupSize(-1);
+        }
+        
+        // Left/Right arrows for timer
+        if(e.key === 'ArrowLeft' && !e.ctrlKey && !e.altKey && !e.metaKey){
+          e.preventDefault();
+          add(-30);
+        }
+        if(e.key === 'ArrowRight' && !e.ctrlKey && !e.altKey && !e.metaKey){
+          e.preventDefault();
+          add(30);
+        }
+      }
+    }
+    
+    // Hotkeys that work even when typing (for specific keys)
+    // ? key and spacebar for random student selection or closing winner modal (main page only)
+    if((e.key==='?' || e.key===' ') && !e.ctrlKey && !e.altKey && !e.metaKey && !isTyping){
+      e.preventDefault(); // Prevent default browser behavior
+      
+      // If winner modal is open, close it
+      if($('#winnerModal').classList.contains('show')){
+        $('#winnerModal').classList.remove('show');
+      }
+      // Otherwise, if on main page, start randomizer
+      else if(!$('#settingsModal').classList.contains('show') && !$('#aiModal').classList.contains('show')){
+        console.log(e.key + ' key pressed - starting randomizer');
+        randomPick();
+      }
+    }
+    // Alternative: / key for random student selection (main page only)
+    if(e.key==='/' && !e.ctrlKey && !e.altKey && !e.metaKey && !isTyping){
+      console.log('/ key pressed - attempting random pick');
+      e.preventDefault(); // Prevent default browser behavior
+      if(!$('#settingsModal').classList.contains('show') && !$('#aiModal').classList.contains('show')){
+        console.log('Settings modal not open, calling randomPick()');
+        randomPick();
+      } else {
+        console.log('Settings modal is open, not calling randomPick()');
+      }
+    }
+    // Escape key to close modals
+    if(e.key==='Escape' && !e.ctrlKey && !e.altKey && !e.metaKey){
+      if($('#settingsModal').classList.contains('show')){
+        $('#settingsModal').classList.remove('show');
+      }
+      if($('#aiModal').classList.contains('show')){
+        $('#aiModal').classList.remove('show');
+      }
+      if($('#winnerModal').classList.contains('show')){
+        $('#winnerModal').classList.remove('show');
+      }
+    }
+    
+    // Hotkeys that work with Cmd/Ctrl modifier (even when typing)
+    if(e.ctrlKey || e.metaKey){
+      // Cmd/Ctrl + R: Reset
+      if(e.key.toLowerCase()==='r'){
+        e.preventDefault();
+        if($('#settingsModal').classList.contains('show')){
+          $('#resetFiltersBtn').click();
+        }
+        $('#quickReset').click();
+      }
+      // Cmd/Ctrl + G: Generate
+      if(e.key.toLowerCase()==='g'){
+        e.preventDefault();
+        if($('#settingsModal').classList.contains('show')){
+          $('#genBtn').click();
+        } else {
+          generateWithCurrentSettings();
+        }
+      }
+      // Cmd/Ctrl + S: Settings
+      if(e.key.toLowerCase()==='s'){
+        e.preventDefault();
+        if(!$('#settingsModal').classList.contains('show')){
+          openSettings();
+        }
+      }
+      // Cmd/Ctrl + A: AI Settings
+      if(e.key.toLowerCase()==='a'){
+        e.preventDefault();
+        if(!$('#settingsModal').classList.contains('show')){
+          openAISettings();
+        }
+      }
+      // Cmd/Ctrl + Response numbers
+      if(['1','2','3','4'].includes(e.key)){
+        e.preventDefault();
+        const mode = e.key === '1' ? 'open' : e.key;
+        setResponseModeAndGenerate(mode);
+      }
+      // Cmd/Ctrl + W: Would You Rather
+      if(e.key.toLowerCase()==='w'){
+        e.preventDefault();
+        setResponseModeAndGenerate('wyr');
+      }
+    }
+  });
+  $('#openSettings').onclick=openSettings;
+  $('#closeSettings').onclick=()=>$('#settingsModal').classList.remove('show');
+  $('#applySettings').onclick=()=>{
+    console.log('Apply Settings button clicked');
+    try {
+      const mode=getSelectedResponseMode();
+      console.log('Selected mode:', mode);
+      const q=$('#qInput').value.trim()||'Which choice fits you best right now? Explain why.';
+      console.log('Question value:', q);
+      setQuestionSafe(q);
+      const lines=(mode==='open')?[]:[$('#a1').value,$('#a2').value,$('#a3').value,$('#a4').value].map(s=>s.trim()).filter(Boolean);
+      console.log('Answer lines:', lines);
+      applyChoices(mode,lines);
+      const saved=load('mxq_choices')||{}; save('mxq_choices',{...saved,q:$('#question').textContent});
+      save('mxq_grade',$('#gradeInput').value); save('mxq_subject',$('#subjectInput').value); save('mxq_ls',$('#lsInput').value);
+      save('mxq_keywords',$('#keywordInput').value); save('mxq_blooms',$('#bloomsInput').value);
+      save('mxq_concise',$('#conciseToggle').checked);
+      console.log('Settings saved, closing modal');
+      $('#settingsModal').classList.remove('show');
+      console.log('Modal closed');
+    } catch (error) {
+      console.error('Error in applySettings:', error);
+      alert('Error saving settings: ' + error.message);
+    }
+  };
+
+  function updateAIWarning(message, isError = false) {
+    const status = $('#aiStatus');
+    if (isError) {
+      status.style.display = 'inline';
+      if (message.includes('Rate Limit')) {
+        status.textContent = '⚠️';
+        status.style.color = '#f59e0b'; // Orange for rate limit
+      } else {
+        status.textContent = '❌';
+        status.style.color = '#ef4444'; // Red for other errors
+      }
+    } else {
+      status.style.display = 'none';
+    }
+  }
+  
+  function aiStatus(){
+    const s=load('mxq_ai_status');
+    const main=$('#aiStatusMain'), det=$('#aiStatusDetail'), det2=$('#aiStatusDetail2');
+    const status=$('#aiStatus');
+    let mainMsg='AI: not checked', detailMsg='Status: not checked';
+    let showStatus=false;
+    let statusSymbol='❌';
+    let statusColor='#ef4444';
+    
+    if(s){
+      const t=new Date(s.time).toLocaleTimeString(); 
+      
+      // Check if there's a rate limit error
+      const lastError = localStorage.getItem('mxq_last_ai_error');
+      const activeKey = getActiveKeyName();
+      
+      // Only show rate limit error if the current active key actually failed
+      const lastFailedKey = localStorage.getItem('mxq_last_failed_key');
+      const isCurrentKeyFailed = lastFailedKey === activeKey;
+      
+      if(lastError && lastError.includes('quota exceeded') && isCurrentKeyFailed) {
+        mainMsg = `Rate limit exceeded ⚠️ (${activeKey}) [${t}]`;
+        detailMsg = `Status: Rate limit exceeded ⚠️ (${activeKey}) [${t}]`;
+        showStatus = true;
+        statusSymbol = '⚠️';
+        statusColor = '#f59e0b'; // Orange for warning
+      } else if(s.ok) {
+        mainMsg = `Connected ✅ (${activeKey}) [${t}]`;
+        detailMsg = mainMsg.replace('AI: ','Status: ');
+        showStatus = true;
+        statusSymbol = '✅';
+        statusColor = '#22c55e'; // Green for connected
+      } else {
+        mainMsg = `Not connected ❌ (${activeKey}) [${t}]`;
+        detailMsg = mainMsg.replace('AI: ','Status: ');
+        showStatus = true;
+        statusSymbol = '❌';
+        statusColor = '#ef4444'; // Red for not connected
+      }
+    } else {
+      showStatus = true;
+      statusSymbol = '❌';
+      statusColor = '#ef4444'; // Red for not checked
+      mainMsg = 'AI: not checked';
+      detailMsg = 'Status: not checked';
+    }
+    
+    main.textContent=mainMsg; 
+    if(det) det.textContent=detailMsg; 
+    if(det2) det2.textContent=detailMsg;
+    
+    // Show/hide status indicator on main page
+    if(showStatus) {
+      status.style.display = 'inline';
+      status.textContent = statusSymbol;
+      status.style.color = statusColor;
+    } else {
+      status.style.display = 'none';
+    }
+    
+    // Update progress bar when status changes
+    updateTokenProgress();
+  }
+  $('#aiBtn').onclick=async()=>{ 
+    const savedKey = load('mxq_ai_key');
+    $('#aiKey').value = savedKey || 'AIzaSyDpx9ITK7RRlxYgbVaF_gkDJAAdmkjBzoQ'; 
+    $('#aiModel').value=load('mxq_ai_model')||'gemini-2.0-flash'; 
+    $('#aiModal').classList.add('show'); 
+    
+    // Initialize Quick Switch buttons first
+    updateQuickSwitchButtons(); // Initialize Quick Switch buttons
+    
+    // Debug: Check current active key
+    const currentActiveKey = getActiveKeyName();
+    console.log('Modal opened - current active key:', currentActiveKey);
+    
+    // Force initial button state update
+    updateKeyButtons();
+    
+    // Force a fresh connection test to get current status
+    const testResult = await (async()=>{
+      console.log('Modal opened - testing current key connection...');
+      const key = getKey();
+      console.log('Testing key:', key.substring(0, 10) + '...' + key.substring(key.length - 10));
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'test' }] }]
+        })
+      });
+      
+      console.log('Test result status:', res.status);
+      
+      if(!res.ok) {
+        const errorText = await res.text();
+        if(res.status === 429) {
+          localStorage.setItem('mxq_last_ai_error', 'Daily quota exceeded (200 requests). Resets at midnight Pacific Time.');
+          localStorage.setItem('mxq_last_failed_key', getActiveKeyName());
+        } else {
+          localStorage.setItem('mxq_last_ai_error', `HTTP ${res.status} error`);
+          localStorage.setItem('mxq_last_failed_key', getActiveKeyName());
+        }
+        return false;
+      }
+      
+      // Clear any previous errors for this key
+      localStorage.removeItem('mxq_last_ai_error');
+      localStorage.removeItem('mxq_last_failed_key');
+      return true;
+    })();
+    
+    // Update status based on test result
+    const statusObj = {
+      ok: testResult,
+      time: Date.now()
+    };
+    localStorage.setItem('mxq_ai_status', JSON.stringify(statusObj));
+    
+    // Debug: Check final active key
+    const finalActiveKey = getActiveKeyName();
+    console.log('Modal opened - final active key:', finalActiveKey, 'test result:', testResult);
+    
+    // Now update UI with correct status
+    aiStatus();
+    
+    // Force a small delay to ensure DOM is ready, then update buttons
+    setTimeout(() => {
+      updateKeyButtons();
+      updateTokenProgress();
+    }, 50);
+  };
+  $('#aiSave').onclick=()=>{ save('mxq_ai_key',$('#aiKey').value.trim()); save('mxq_ai_model',$('#aiModel').value.trim()); $('#aiModal').classList.remove('show'); toast('AI settings saved'); aiStatus(); };
+  $('#aiClose').onclick=()=>$('#aiModal').classList.remove('show');
+  
+  // Reset filters button
+  $('#resetFiltersBtn').onclick=()=>{
+    $('#gradeInput').value='2';
+    $('#subjectInput').value='General';
+    $('#lsInput').value='General';
+    $('#keywordInput').value='';
+    $('#bloomsInput').value='Evaluate';
+    $('#conciseToggle').checked=false;
+    $('#selInput').value='';
+    setSelectedResponseMode('4');
+    toggleAnswerFields('4');
+    populateSELDropDown(); // Update SEL dropdown for new grade
+    toast('Filters reset to default');
+  };
+  
+  $('#aiTest').onclick=async()=>{ 
+    console.log('=== AI CONNECTION TEST START ===');
+    console.log('Current timestamp:', Date.now());
+    console.log('Forcing fresh test...');
+    console.log('Using FIXED version of the file');
+    
+    // Clear only model settings, keep error state for progress bar
+    localStorage.removeItem('mxq_ai_model');
+    console.log('Cleared model settings, keeping error state');
+    
+    const ok = await (async()=>{
+      try{
+        // Check if we can even get the key
+        const key = getKey();
+        console.log('API Key retrieved, length:', key.length);
+        console.log('API Key starts with:', key.substring(0, 10) + '...');
+        console.log('API Key ends with:', key.substring(key.length - 10));
+        
+        if(!key || key.length < 10) {
+          console.log('ERROR: Invalid API key');
+          return false;
+        }
+        
+        // Try the simplest possible test with the working model
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`;
+        console.log('Making request to:', url.substring(0, 100) + '...');
+        
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            contents:[{
+              role:'user',
+              parts:[{text:'Say "hello"'}]
+            }]
+          })
+        });
+        
+        console.log('Response status:', res.status);
+        console.log('Response ok:', res.ok);
+        console.log('Response headers:', Object.fromEntries(res.headers.entries()));
+        
+        if(!res.ok) {
+          const errorText = await res.text();
+          console.log('ERROR: Response not ok:', res.status, errorText);
+          
+                          // Check if it's a rate limit error
+        if(res.status === 429) {
+          localStorage.setItem('mxq_last_ai_error', 'Daily quota exceeded (200 requests). Resets at midnight Pacific Time.');
+          localStorage.setItem('mxq_last_failed_key', getActiveKeyName());
+          console.log('Rate limit detected for key:', getActiveKeyName());
+        } else {
+          localStorage.setItem('mxq_last_ai_error', `HTTP ${res.status} error`);
+          localStorage.setItem('mxq_last_failed_key', getActiveKeyName());
+        }
+        
+        // Update progress bar to show rate limit
+        updateTokenProgress();
+        
+        // Try auto-switching to backup key
+        console.log('Attempting auto-switch to backup key...');
+        const switchResult = await autoSwitchToBackup();
+        if(switchResult) {
+          console.log('Auto-switch successful, retesting connection...');
+          return await (async()=>{
+            const key = getKey();
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: 'test' }] }]
+              })
+            });
+            return res.ok;
+          })();
+        }
+        
+        return false;
+        }
+        
+        const data = await res.json();
+        console.log('SUCCESS: Got response:', data);
+        
+        // Increment token usage for successful request
+        incrementTokenUsage(getActiveKeyName());
+        updateTokenProgress();
+        
+        return true;
+        
+      }catch(e){
+        console.log('ERROR: Exception caught:', e.message);
+        console.log('ERROR: Full error:', e);
+        console.log('ERROR: Stack trace:', e.stack);
+        return false;
+      }
+    })(); 
+    console.log('=== AI CONNECTION TEST END ===');
+    console.log('Final result:', ok);
+    save('mxq_ai_status',{ok,provider:'gemini',time:Date.now()}); 
+    aiStatus(); 
+    toast(ok?'AI connected':'AI not connected'); 
+  };
+  
+  $('#keyMain').onclick=()=>{
+    switchToKey('main');
+  };
+  
+  $('#keyBU1').onclick=()=>{
+    switchToKey('BU1');
+  };
+  
+  $('#keyBU2').onclick=()=>{
+    switchToKey('BU2');
+  };
+  
+  // Quick Switch button event listeners
+  $('#model2Flash').onclick=()=>{
+    $('#aiModel').value = 'gemini-2.0-flash';
+    updateQuickSwitchButtons();
+    toast('Switched to Gemini 2.0 Flash');
+  };
+  
+  $('#model1Flash').onclick=()=>{
+    $('#aiModel').value = 'gemini-1.5-flash';
+    updateQuickSwitchButtons();
+    toast('Switched to Gemini 1.5 Flash');
+  };
+  
+  $('#model1Pro').onclick=()=>{
+    $('#aiModel').value = 'gemini-1.5-pro';
+    updateQuickSwitchButtons();
+    toast('Switched to Gemini 1.5 Pro');
+  };
+
+  async function setResponseModeAndGenerate(mode){
+    console.log('=== SET RESPONSE MODE AND GENERATE ===', mode);
+    
+    // Update the saved choices with new mode
+    const saved=load('mxq_choices')||{};
+    saved.mode = mode;
+    save('mxq_choices', saved);
+    
+    // If in settings modal, update the UI
+    if($('#settingsModal').classList.contains('show')){
+      setSelectedResponseMode(mode);
+      toggleAnswerFields(mode);
+    }
+    
+    // Generate new question with current settings and new mode
+    const count = mode==='open' ? 1 : mode==='wyr' ? 2 : parseInt(mode,10);
+    const kw=load('mxq_keywords',''), grade=load('mxq_grade','2'), subject=load('mxq_subject','General'), ls=load('mxq_ls','General'), blooms=load('mxq_blooms','Evaluate');
+    const concise=!!load('mxq_concise',false);
+    
+    console.log('Generation params:', {mode, count, kw, grade, subject, ls, blooms, concise});
+    
+    try{
+      console.log('Attempting Gemini AI generation...');
+      const out=await geminiQ({count: count===1?4:count, kw, grade, subject, ls, blooms, concise});
+      console.log('Gemini AI generation result:', out);
+      
+      console.log('Setting question:', out.question);
+      await setQuestionSafe(out.question);
+      
+      console.log('Applying choices:', out.choices);
+      applyChoices(count===1?'open':String(count), out.choices);
+      
+      aiStatus(); toast(`AI generated (${mode} responses)`);
+      console.log('=== GENERATION COMPLETE ===');
+    }catch(e){
+      console.log('Gemini AI generation failed, using offline:', e);
+      const out=offlineQ(count===1?4:count,subject,ls,concise);
+      await setQuestionSafe(out.question);
+      applyChoices(count===1?'open':String(count), out.choices);
+      aiStatus(); toast(`AI (offline) (${mode} responses)`);
+    }
+  }
+
+  async function generateWithCurrentSettings(){
+    console.log('=== GENERATE WITH CURRENT SETTINGS ===');
+    const saved=load('mxq_choices')||{};
+    const modeSel=saved.mode||'4';
+    const count = modeSel==='open' ? 1 : modeSel==='wyr' ? 2 : parseInt(modeSel,10);
+    const kw=load('mxq_keywords',''), grade=load('mxq_grade','2'), subject=load('mxq_subject','General'), ls=load('mxq_ls','General'), blooms=load('mxq_blooms','Evaluate');
+    const concise=!!load('mxq_concise',false);
+    
+    console.log('Generation params:', {modeSel, count, kw, grade, subject, ls, blooms, concise});
+    
+    try{
+      console.log('Attempting AI generation...');
+      const out=await geminiQ({count: count===1?4:count, kw, grade, subject, ls, blooms, concise});
+      console.log('AI generation result:', out);
+      
+      console.log('Setting question:', out.question);
+      await setQuestionSafe(out.question);
+      
+      console.log('Applying choices:', out.choices);
+      applyChoices(count===1?'open':String(count), out.choices);
+      
+      aiStatus(); toast('AI generated');
+      console.log('=== GENERATION COMPLETE ===');
+    }catch(e){
+      console.log('AI generation failed, using offline:', e);
+      const out=offlineQ(count===1?4:count,subject,ls,concise);
+      await setQuestionSafe(out.question);
+      applyChoices(count===1?'open':String(count), out.choices);
+      aiStatus(); toast('AI (offline)');
+    }
+  }
+
+  $('#genBtn').onclick=async()=>{
+    console.log('=== GENERATE BUTTON CLICKED ===');
+    const modeSel=getSelectedResponseMode();
+    const count = modeSel==='open' ? 1 : modeSel==='wyr' ? 2 : parseInt(modeSel,10);
+    const kw=$('#keywordInput').value.trim(), grade=$('#gradeInput').value, subject=$('#subjectInput').value, ls=$('#lsInput').value, blooms=$('#bloomsInput').value;
+    const concise=!!$('#conciseToggle').checked; save('mxq_concise', concise);
+    
+    console.log('Generation params:', {modeSel, count, kw, grade, subject, ls, blooms, concise});
+    
+    try{
+      console.log('Attempting AI generation...');
+      const out=await geminiQ({count: count===1?4:count, kw, grade, subject, ls, blooms, concise});
+      console.log('AI generation result:', out);
+      
+      console.log('Setting question:', out.question);
+      await setQuestionSafe(out.question);                  // paint first and wait
+      
+      console.log('Applying choices:', out.choices);
+      applyChoices(count===1?'open':String(count), out.choices); // keep emojis!
+      
+      console.log('Updating answer fields...');
+      ['a1','a2','a3','a4'].forEach((id,i)=> $('#'+id).value=(out.choices?.[i]||'').replace(/^(\p{Emoji_Presentation}|\p{Emoji})\s*/u,'').trim());
+      
+      aiStatus(); toast('AI generated');
+      console.log('=== GENERATION COMPLETE ===');
+    }catch(e){
+      console.log('AI generation failed, using offline:', e);
+      const out=offlineQ(count===1?4:count,subject,ls,concise);
+      await setQuestionSafe(out.question);
+      applyChoices(count===1?'open':String(count), out.choices);
+      await setQuestionSafe(out.question);
+      aiStatus(); toast('AI (offline)');
+    }
+  };
+
+  // roster/save/load/reset buttons
+  $('#openRoster').onclick=()=>$('#rosterModal').classList.add('show');
+  $('#closeRoster').onclick=()=>$('#rosterModal').classList.remove('show');
+  $('#applyRoster').onclick=()=>{ roster=$('#rosterInput').value.split(/\n+/).map(s=>s.trim()).filter(Boolean); save('mxq_roster',roster); makeBadges(); awaitLayoutSpread(); $('#rosterModal').classList.remove('show'); toast('Roster applied') };
+  $('#saveBtn').onclick=()=>{const layout=badges.map(b=>({name:b.textContent.trim(),left:b.style.left,top:b.style.top,zone:b.dataset.zone,hidden:b.classList.contains('pickedHidden'),ig:b.dataset.ignore==='true'})); save('mxq_layout',layout); toast('Layout saved')};
+  $('#loadBtn').onclick=()=>{const layout=load('mxq_layout'); if(!layout){toast('No saved layout');return} const map=new Map(layout.map(x=>[x.name,x])); badges.forEach(b=>{const r=map.get(b.textContent.trim()); if(r){b.style.left=r.left;b.style.top=r.top;b.dataset.zone=r.zone;b.dataset.lastX=r.left;b.dataset.lastY=r.top;b.classList.toggle('pickedHidden',!!r.hidden); if(b.dataset.zone==='parking') b.classList.add('inParking'); else b.classList.remove('inParking');}}); stats(); toast('Layout loaded')};
+  $('#allToParkingBtn').onclick=()=>{distribute(true); toast('All to Parking')};
+  $('#resetWeekBtn').onclick=()=>{pickedSet.clear();save('mxq_picked',[]);badges.forEach(b=>b.classList.remove('pickedHidden')); stats(); toast('Weekly picks cleared')};
+  $('#quickReset').onclick=()=>{
+    distribute(true); 
+    resetT(); // Also reset timer
+    toast('All to Parking & Timer Reset')};
+  
+  // Partner function
+  $('#partnerBtn').onclick=createPartners;
+  
+  function changeGroupSize(delta) {
+    const input = document.getElementById('partnerSize');
+    const currentValue = parseInt(input.value) || 2;
+    const newValue = Math.max(2, Math.min(10, currentValue + delta));
+    input.value = newValue;
+  }
+  
+  // Add P hotkey support for partner size input
+  document.getElementById('partnerSize').addEventListener('keydown', function(e) {
+    if(e.key.toLowerCase() === 'p') {
+      e.preventDefault();
+      createPartners();
+    }
+  });
+  
+  // Add event listeners for group size buttons
+  document.getElementById('decreaseGroupSize').addEventListener('click', function() {
+    changeGroupSize(-1);
+  });
+  
+  document.getElementById('increaseGroupSize').addEventListener('click', function() {
+    changeGroupSize(1);
+  });
+  
+  function createPartners(){
+    console.log('=== CREATE PARTNERS FUNCTION STARTED ===');
+    const groupSize = parseInt($('#partnerSize').value) || 2;
+    console.log('Group size:', groupSize);
+    if(groupSize < 2 || groupSize > 10) {
+      toast('Group size must be 2-10');
+      return;
+    }
+    
+    // Keep current question displayed - don't change it to PARTNERS
+    // setQuestionSafe('PARTNERS');
+    
+    // Get all students (not in parking, excluding Mr. Cushman)
+    const allStudents = badges.filter(b => 
+      b.dataset.ignore !== 'true' && 
+      !b.textContent.includes('Mr. Cushman')
+    );
+    console.log('All students count:', allStudents.length);
+    
+    // Get placed students (not in parking) - includes all students outside parking lot
+    const placedStudents = allStudents.filter(b => b.dataset.zone !== 'parking' && b.dataset.zone !== undefined);
+    console.log('Placed students count:', placedStudents.length);
+    
+    // Get students currently in parking lot
+    const studentsInParking = allStudents.filter(b => b.dataset.zone === 'parking');
+    console.log('Students in parking count:', studentsInParking.length);
+    
+    let studentsToGroup = [];
+    let allInParking = false;
+    
+    // Check if ALL students are in parking lot
+    if(studentsInParking.length === allStudents.length) {
+      // All students are in parking - group them there
+      allInParking = true;
+      studentsToGroup = allStudents.map(b => b.textContent.trim());
+      console.log('All students in parking - grouping in parking lot');
+    } else {
+      // Some students are outside parking - group only those outside parking
+      allInParking = false;
+      studentsToGroup = placedStudents.map(b => b.textContent.trim());
+      console.log('Some students outside parking - grouping in response zone');
+    }
+    
+    console.log('Students to group:', studentsToGroup);
+    console.log('All in parking flag:', allInParking);
+    
+    // Create balanced groups (some groups can be 1 person larger if needed)
+    const groups = [];
+    const totalStudents = studentsToGroup.length;
+    
+    if(totalStudents === 0) {
+      toast('No students to group');
+      return;
+    }
+    
+    // Shuffle the students randomly
+    const shuffledStudents = [...studentsToGroup].sort(() => Math.random() - 0.5);
+    
+    // Create groups with some groups being +1 larger if needed
+    const numGroups = Math.floor(totalStudents / groupSize);
+    const extraStudents = totalStudents % groupSize;
+    
+    let studentIndex = 0;
+    for(let i = 0; i < numGroups; i++) {
+      const currentGroupSize = groupSize + (i < extraStudents ? 1 : 0);
+      const group = shuffledStudents.slice(studentIndex, studentIndex + currentGroupSize);
+      groups.push(group);
+      studentIndex += currentGroupSize;
+    }
+    
+    // Determine positioning based on whether students are in parking or response areas
+    let startX, startY, badgeWidth, badgeHeight, groupSpacing;
+    
+    if(allInParking) {
+      // All students are in parking - group them there
+      console.log('Setting up parking lot positioning');
+      const parkingPad = document.getElementById('parkingPad');
+      const parkingRect = parkingPad.getBoundingClientRect();
+      const stageRect = document.getElementById('stage').getBoundingClientRect();
+      startX = parkingRect.left - stageRect.left + 20;
+      startY = parkingRect.top - stageRect.top + 80; // Below the parking label
+      badgeWidth = 100;
+      badgeHeight = 50;
+      groupSpacing = 30;
+      
+      // Keep students in parking lot - don't move them to response zone
+      studentsToGroup.forEach(studentName => {
+        const badge = allStudents.find(b => b.textContent.trim() === studentName);
+        if(badge && !badge.textContent.includes('Mr. Cushman')) {
+          badge.dataset.zone = 'parking';
+          badge.classList.add('inParking');
+        }
+      });
+    } else {
+      // Some students are in response areas - move them to response zone
+      console.log('Setting up response zone positioning');
+      startX = 20;
+      startY = 80;
+      badgeWidth = 100;
+      badgeHeight = 50;
+      groupSpacing = 30;
+      
+      // Move only the students that should be grouped to the response zone
+      studentsToGroup.forEach(studentName => {
+        const badge = allStudents.find(b => b.textContent.trim() === studentName);
+        if(badge && !badge.textContent.includes('Mr. Cushman')) {
+          badge.dataset.zone = '0';
+          badge.classList.remove('inParking');
+        }
+      });
+    }
+    
+    // Ensure Mr. Cushman stays in parking lot and is visible (will position after groups are placed)
+    const teacherBadge = badges.find(b => b.textContent.includes('Mr. Cushman'));
+    if(teacherBadge) {
+      teacherBadge.dataset.zone = 'parking';
+      teacherBadge.classList.add('inParking');
+      teacherBadge.dataset.ignore = 'true';
+      teacherBadge.style.visibility = 'visible'; // Ensure he's visible
+    }
+    
+    // Only create response zones if students are being moved there (not when all in parking)
+    if(!allInParking) {
+      // Create empty response zones (no text needed) FIRST
+      const choices = ['Ask your partner what they think!'];
+      const colors = ['blue'];
+      buildZones(choices, colors);
+    }
+    
+    // Force a reflow to ensure the container is rendered (only if response zones exist)
+    if(!allInParking) {
+      document.querySelector('.zone').offsetHeight;
+    }
+    
+    // NOW position students in groups with touching edges - simple horizontal flow
+    let currentX = startX;
+    let currentY = startY;
+    
+    // Get the actual container dimensions
+    let containerWidth;
+    if(!allInParking) {
+      const responseZone = document.querySelector('.zone');
+      containerWidth = responseZone ? responseZone.offsetWidth - 40 : 600; // Subtract padding
+    } else {
+      // When all students are in parking, use parking area width
+      const parkingPad = document.getElementById('parkingPad');
+      containerWidth = parkingPad ? parkingPad.offsetWidth - 40 : 600;
+    }
+    
+    groups.forEach((group, groupIndex) => {
+      // Calculate actual group width by measuring badges
+      let groupWidth = 0;
+      const groupBadges = [];
+      
+      // First, get all badges for this group and measure their widths
+      group.forEach((studentName, studentIndex) => {
+        const badge = allStudents.find(b => b.textContent.trim() === studentName);
+        if(badge) {
+          groupBadges.push(badge);
+          // Temporarily position to measure
+          badge.style.left = '0px';
+          badge.style.top = '0px';
+          badge.style.visibility = 'hidden';
+          badge.style.position = 'absolute';
+          
+          // Force a reflow to get accurate measurements
+          badge.offsetHeight;
+          const badgeRect = badge.getBoundingClientRect();
+          groupWidth += badgeRect.width;
+        }
+      });
+      
+      // Check if this group will fit on current line
+      if(currentX + groupWidth > containerWidth) {
+        // Start new line
+        currentX = startX;
+        currentY += badgeHeight + 15;
+      }
+      
+      // Position students in this group with touching edges
+      let badgeX = currentX;
+      groupBadges.forEach((badge, studentIndex) => {
+        badge.style.visibility = 'visible';
+        badge.style.left = badgeX + 'px';
+        badge.style.top = currentY + 'px';
+        
+        // Get the actual width of this badge
+        const badgeRect = badge.getBoundingClientRect();
+        badgeX += badgeRect.width; // Next badge starts where this one ends
+      });
+      
+      // Move to next group position (add spacing after the group)
+      currentX = badgeX + groupSpacing;
+    });
+    
+    // Now position Mr. Cushman only when all students are in parking lot
+    if(teacherBadge && allInParking) {
+      const parkingPad = document.getElementById('parkingPad');
+      if(parkingPad) {
+        const parkingRect = parkingPad.getBoundingClientRect();
+        const stageRect = document.getElementById('stage').getBoundingClientRect();
+        
+        // When all students are in parking, position at far right of second row
+        const parkingWidth = parkingPad.offsetWidth - 40; // Available width
+        const teacherX = parkingRect.left - stageRect.left + parkingWidth - 150; // Moved right from 180, but not as far as original 120
+        const teacherY = parkingRect.top - stageRect.top + 140; // Moved down (was 120)
+        
+        teacherBadge.style.left = teacherX + 'px';
+        teacherBadge.style.top = teacherY + 'px';
+      }
+    }
+    // When students are in response zones, Mr. Cushman stays in his original parking position
+    
+    // Save the partner setup (keep current question and choices)
+    const currentChoices = load('mxq_choices') || {};
+    save('mxq_choices', {
+      q: currentChoices.q || $('#question').textContent,
+      choices: currentChoices.choices || Array.from(document.querySelectorAll('.zone h3')).map(h => h.textContent),
+      mode: currentChoices.mode || '4'
+    });
+    
+    stats();
+    
+    // Show group size info
+    const groupSizes = groups.map(g => g.length);
+    const sizeInfo = groupSizes.length > 0 ? 
+      `Created ${groups.length} groups: ${groupSizes.join(', ')} students each` : 
+      'No students to group';
+    toast(sizeInfo);
+  }
+
+  // presets
+  $('#presetMood').onclick=()=>{
+    const choices=['😌 Blue Zone','😠 Red Zone','😑 Yellow Zone','🙂 Green Zone'];
+    setQuestionSafe('What Zone are you in?');
+    buildZones(choices,['blue','red','yellow','green']);
+    save('mxq_choices',{q:$('#question').textContent,choices,colors:['blue','red','yellow','green'],mode:'4'});
+    $('#settingsModal').classList.remove('show');
+    stats();
+  };
+  $('#presetWeekend').onclick=()=>{
+    setQuestionSafe('What was the most interesting part of your weekend?');
+    const lines=[
+      'Something new I did or learned',
+      'Doing one of my favourite things',
+      'Spending time with someone I love',
+      'Something else'
+    ];
+    applyChoices('4',lines);
+    $('#settingsModal').classList.remove('show');
+  };
+  $('#presetLeo').onclick=()=>{
+    setQuestionSafe('🦁 What was your favourite part of the week? ❤️');
+    const lines=[
+      'Something new I did or learned',
+      'Doing one of my favourite things',
+      'Spending time with someone I love',
+      'Something else'
+    ];
+    applyChoices('4',lines);
+    $('#settingsModal').classList.remove('show');
+  };
+
+  async function awaitLayoutSpread(){ await raf(); await raf(); distribute(true); stats(); }
+  async function boot(){
+    console.log('=== BOOT FUNCTION STARTED ===');
+    if (localStorage.getItem('mxq_grade') === null)   save('mxq_grade','2');
+    if (localStorage.getItem('mxq_blooms') === null)  save('mxq_blooms','Evaluate');
+    if (localStorage.getItem('mxq_subject') === null) save('mxq_subject','General');
+    if (localStorage.getItem('mxq_ls') === null)      save('mxq_ls','General');
+    if (localStorage.getItem('mxq_concise') === null) save('mxq_concise', false);
+
+    console.log('Settings initialized');
+    ensureWeek();
+    roster = load('mxq_roster') || $('#rosterInput').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    console.log('Roster loaded:', roster.length, 'students');
+
+    const grade=load('mxq_grade','2'), subject=load('mxq_subject','General'), ls=load('mxq_ls','General'), blooms=load('mxq_blooms','Evaluate'), kw=load('mxq_keywords',''); const concise=!!load('mxq_concise',false);
+    console.log('Generation params:', {grade, subject, ls, blooms, kw, concise});
+    
+    let out;
+    try{ 
+      console.log('Attempting AI generation...');
+      out = await getQ(4,kw,grade,subject,ls,blooms,concise);
+      console.log('AI generation successful:', out);
+    } catch(e) { 
+      console.log('AI generation failed, using offline:', e);
+      out = offlineQ(4,subject,ls,concise); 
+      console.log('Offline generation result:', out);
+    }
+    
+    console.log('Setting question:', out.question);
+    setQuestionSafe(out.question);
+    console.log('Question set');
+    
+    // ensure emojis on initial choices too
+    const initChoices = ensureEmojis(out.choices||[]);
+    console.log('Initial choices with emojis:', initChoices);
+    buildZones(initChoices, initChoices.map((_,i)=>['blue','red','green','purple'][i%4]));
+    save('mxq_choices',{q:$('#question').textContent,choices:initChoices,mode:'4'});
+
+    console.log('Creating badges...');
+    makeBadges();
+    console.log('Badges created');
+    
+    await awaitLayoutSpread();
+    console.log('Layout spread complete');
+
+    let t; const ro=new ResizeObserver(()=>{clearTimeout(t); t=setTimeout(()=>{distribute(false)},60)}); ro.observe($('#parkingPad'));
+    window.addEventListener('resize',()=>{clearTimeout(t); t=setTimeout(()=>{distribute(false)},120)});
+
+    aiStatus(); updateQDebug();
+    console.log('=== BOOT FUNCTION COMPLETE ===');
+  }
+  boot();
+  
+  // Fallback to ensure question loads
+  setTimeout(() => {
+    const questionEl = document.getElementById('question');
+    if (questionEl && (questionEl.textContent === 'Loading question…' || !questionEl.textContent.trim())) {
+      console.log('Fallback: Setting default question');
+      setQuestionSafe('What is one smart way you can explain your thinking today?');
+      const fallbackChoices = ['🤝 Work with a partner', '🎲 Ask a question', '📖 Explain with an example', '📝 Other (explain)'];
+      buildZones(fallbackChoices, ['blue', 'red', 'green', 'purple']);
+      save('mxq_choices', {q: 'What is one smart way you can explain your thinking today?', choices: fallbackChoices, mode: '4'});
+    }
+  }, 2000);
+
+  // ---------- TIMER ----------
+  let tSeconds=60, tTicker=null, tRunning=false;
+  const txt=()=>{const m=Math.floor(tSeconds/60), s=String(tSeconds%60).padStart(2,'0'); return `${m}:${s}`}
+  function renderTime(){ $('#timeText').textContent=txt() }
+  function chime(){ try{const c=new (window.AudioContext||window.webkitAudioContext)(); const o=c.createOscillator(), g=c.createGain(); o.type='sine'; o.frequency.value=880; g.gain.value=0.0001; g.gain.exponentialRampToValueAtTime(0.18,c.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+1.0); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+1.05); setTimeout(()=>c.close(),1200);}catch{} }
+  function tick(){
+    if(!tRunning) return;
+    if(tSeconds>0){ tSeconds--; renderTime(); if(tSeconds===0){ chime(); $('#startPause').textContent='▶'; tRunning=false; clearInterval(tTicker); tTicker=null; } }
+  }
+  function start(){ if(tRunning) return; tRunning=true; $('#startPause').textContent='⏸'; if(!tTicker) tTicker=setInterval(tick,1000) }
+  function pause(){ tRunning=false; $('#startPause').textContent='▶'; if(tTicker){clearInterval(tTicker); tTicker=null} }
+  function toggleRun(){ tRunning?pause():start() }
+  function add(sec){ tSeconds=Math.max(0,Math.min(60*60, tSeconds+sec)); renderTime(); }
+  function resetT(){ 
+    pause(); 
+    tSeconds=60; 
+    renderTime(); 
+    // Also reset weekly picks when timer is reset
+    pickedSet.clear();
+    save('mxq_picked',[]);
+    badges.forEach(b=>b.classList.remove('pickedHidden'));
+    stats();
+  }
+
+  let isReading = false;
+  let currentReadingTimeout = null;
+  let currentHighlightTimeout = null;
+  
+  function readAloud(){
+    // If already reading, stop it
+    if (isReading) {
+      stopReading();
+      return;
+    }
+    
+    // Ensure voices are loaded
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        readAloud();
+      };
+      return;
+    }
+    
+    // Set reading state
+    isReading = true;
+    $('#readAloudBtn').style.backgroundColor = '#22c55e';
+    $('#readAloudBtn').style.color = 'white';
+    
+    const question = $('#question').textContent;
+    const choices = Array.from(document.querySelectorAll('.zone h3')).map(h => h.textContent);
+    
+    // Try to get a Canadian or natural voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoices = voices.filter(voice => 
+      voice.name.includes('Samantha') || 
+      voice.name.includes('Alex') || 
+      voice.name.includes('Victoria') ||
+      voice.name.includes('Daniel') ||
+      voice.name.includes('Karen') ||
+      voice.name.includes('Tessa') ||
+      voice.name.includes('Tom') ||
+      voice.name.includes('Fiona') ||
+      voice.name.includes('Moira') ||
+      voice.name.includes('Rishi') ||
+      voice.name.includes('Ava') ||
+      voice.name.includes('Siri') ||
+      voice.name.includes('Google') ||
+      voice.name.includes('Microsoft')
+    );
+    
+    const selectedVoice = preferredVoices.length > 0 ? preferredVoices[0] : null;
+    
+    // Create word mapping with element references, properly handling emojis
+    const wordMap = [];
+    
+    // Process question words - create a clean version without emojis for speech
+    const questionWords = question.split(' ');
+    const questionWordsClean = [];
+    const questionWordIndices = [];
+    
+    questionWords.forEach((word, index) => {
+      // Skip if this is an emoji
+      if (!/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1F018}-\u{1F270}]|[\u{238C}-\u{2454}]|[\u{20D0}-\u{20FF}]/gu.test(word)) {
+        questionWordsClean.push(word);
+        questionWordIndices.push(index);
+      }
+    });
+    
+    // Add question words to map
+    questionWordsClean.forEach((word, cleanIndex) => {
+      wordMap.push({
+        word: word,
+        element: $('#question'),
+        originalIndex: questionWordIndices[cleanIndex],
+        type: 'question'
+      });
+    });
+    
+    // Process choice words
+    choices.forEach((choice, choiceIndex) => {
+      const choiceWords = choice.split(' ');
+      const choiceWordsClean = [];
+      const choiceWordIndices = [];
+      
+      choiceWords.forEach((word, index) => {
+        // Skip if this is an emoji
+        if (!/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1F018}-\u{1F270}]|[\u{238C}-\u{2454}]|[\u{20D0}-\u{20FF}]/gu.test(word)) {
+          choiceWordsClean.push(word);
+          choiceWordIndices.push(index);
+        }
+      });
+      
+      // Add choice words to map
+      choiceWordsClean.forEach((word, cleanIndex) => {
+        wordMap.push({
+          word: word,
+          element: document.querySelectorAll('.zone h3')[choiceIndex],
+          originalIndex: choiceWordIndices[cleanIndex],
+          type: 'choice',
+          choiceIndex: choiceIndex
+        });
+      });
+    });
+    
+    let currentWordIndex = 0;
+    
+    function speakNextWord() {
+      if (!isReading || currentWordIndex >= wordMap.length) {
+        // All done - clean up
+        stopReading();
+        return;
+      }
+      
+      const currentWord = wordMap[currentWordIndex];
+      
+      // Remove previous highlighting
+      document.querySelectorAll('.highlight-word').forEach(el => {
+        el.classList.remove('highlight-word');
+      });
+      
+      // Highlight current word using the original index
+      const element = currentWord.element;
+      const text = element.textContent;
+      const words = text.split(' ');
+      
+      if (words[currentWord.originalIndex]) {
+        // Find the position of this word in the original text
+        let wordStart = 0;
+        for (let i = 0; i < currentWord.originalIndex; i++) {
+          wordStart += words[i].length + 1; // +1 for space
+        }
+        
+        const beforeWord = text.substring(0, wordStart);
+        const afterWord = text.substring(wordStart + words[currentWord.originalIndex].length);
+        
+        element.innerHTML = `${beforeWord}<span class="highlight-word" style="background-color: rgba(34, 211, 153, 0.5); border-radius: 4px; padding: 2px 4px;">${words[currentWord.originalIndex]}</span>${afterWord}`;
+      }
+      
+      // Create speech for this word
+      const speech = new SpeechSynthesisUtterance(currentWord.word);
+      speech.rate = 1.0; // Natural speed - not too fast or slow
+      speech.pitch = 1.1;
+      speech.volume = 0.9;
+      if (selectedVoice) speech.voice = selectedVoice;
+      
+      speech.onend = () => {
+        // Clear highlighting after a delay (separate from voice timing)
+        setTimeout(() => {
+          $('#question').innerHTML = $('#question').textContent;
+          document.querySelectorAll('.zone h3').forEach(el => {
+            el.innerHTML = el.textContent;
+          });
+        }, 400); // Highlighting stays visible for 400ms
+        
+        // Move to next word immediately (no delay for voice)
+        currentReadingTimeout = setTimeout(() => {
+          if (isReading) {
+            currentWordIndex++;
+            speakNextWord();
+          }
+        }, 50); // Very short delay for voice flow
+      };
+      
+      window.speechSynthesis.speak(speech);
+    }
+    
+    // Start speaking
+    speakNextWord();
+  }
+  
+  function stopReading() {
+    isReading = false;
+    window.speechSynthesis.cancel();
+    if (currentReadingTimeout) {
+      clearTimeout(currentReadingTimeout);
+      currentReadingTimeout = null;
+    }
+    if (currentHighlightTimeout) {
+      clearTimeout(currentHighlightTimeout);
+      currentHighlightTimeout = null;
+    }
+    
+    // Reset button appearance
+    $('#readAloudBtn').style.backgroundColor = '';
+    $('#readAloudBtn').style.color = '';
+    
+    // Clean up highlighting by restoring original text content
+    $('#question').innerHTML = $('#question').textContent;
+    document.querySelectorAll('.zone h3').forEach(el => {
+      el.innerHTML = el.textContent;
+    });
+  }
+
+  $('#minus30').onclick=()=>add(-30);
+  $('#plus30').onclick=()=>add(+30);
+  $('#startPause').onclick=toggleRun;
+  $('#tReset').onclick=resetT;
+  $('#readAloudBtn').onclick=readAloud;
+  renderTime();
+
+  function switchModel(model) {
+    $('#aiModel').value = model;
+    save('mxq_ai_model', model);
+    // Clear cached AI status to force fresh connection test
+    localStorage.removeItem('mxq_ai_status');
+    toast(`Switched to ${model}`);
+    // Clear any existing warnings when switching models
+    updateAIWarning('', false);
+    // Update status to show we're trying a new model
+    aiStatus();
+  }
+  
+  function openAISettings() {
+    // Open settings modal first
+    $('#settingsModal').classList.add('show');
+    // Then open AI settings modal on top
+    const savedKey = load('mxq_ai_key');
+    $('#aiKey').value = savedKey || 'AIzaSyDpx9ITK7RRlxYgbVaF_gkDJAAdmkjBzoQ'; 
+    $('#aiModel').value = load('mxq_ai_model') || 'gemini-2.0-flash'; 
+    $('#aiModal').classList.add('show'); 
+    aiStatus();
+  }
+  
+  // Make function globally accessible
+  window.openAISettings = openAISettings;
+
+  $('#model2Flash').onclick=()=>switchModel('gemini-2.0-flash');
+  $('#model1Flash').onclick=()=>switchModel('gemini-1.5-flash');
+  $('#model1Pro').onclick=()=>switchModel('gemini-1.5-pro');
+
+  function checkRateLimitStatus() {
+    console.log('=== RATE LIMIT STATUS CHECK ===');
+    const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    const currentModel = load('mxq_ai_model') || 'gemini-2.0-flash';
+    console.log('Current model:', currentModel);
+    console.log('Available models:', models);
+    
+    // Check if we have any cached error status
+    const lastError = localStorage.getItem('mxq_last_ai_error');
+    if (lastError) {
+      console.log('Last AI error:', lastError);
+    }
+    
+    // Check if we have any successful status
+    const aiStatus = load('mxq_ai_status');
+    if (aiStatus) {
+      console.log('Last AI status:', aiStatus);
+    }
+    
+    return {
+      currentModel,
+      availableModels: models,
+      lastError,
+      aiStatus
+    };
+  }
+  
+  // Make it globally accessible
+  window.checkRateLimitStatus = checkRateLimitStatus;
+
+})();
+</script>
+</body>
+</html>

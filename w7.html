@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MX Daily Check-In — Drag • Randomize • Presets</title>
+<style>
+  :root{
+    --bg:#0a0f1e; --panel:#0f172a; --ink:#e8eef7; --muted:#96a3b8; --stroke:#1e293b;
+    --brand1:#22d3ee; --brand2:#a78bfa; --ok:#34d399; --warn:#fbbf24;
+    --p-blue:#e8f3ff;   --p-blue-b:#93c5fd;
+    --p-red:#ffe7ea;    --p-red-b:#fda4af;
+    --p-green:#ecfff4;  --p-green-b:#86efac;
+    --p-purple:#f3e8ff; --p-purple-b:#c4b5fd;
+    --p-yellow:#fff7cc; --p-yellow-b:#fde68a;
+  }
+  html,body{height:100%;margin:0;background:radial-gradient(1200px 900px at 10% 0%, #0d1634, #0a0f1e 60%);color:var(--ink);font-family:Inter, ui-sans-serif, system-ui, Segoe UI, Roboto, Arial, sans-serif}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:12px;height:100%;padding:16px;box-sizing:border-box}
+
+  /* Settings trigger */
+  .settings-btn{
+    position:fixed; right:16px; top:12px; z-index:60;
+    background:#0b1226; border:1px solid var(--stroke); color:var(--ink);
+    padding:10px 14px; border-radius:14px; font-weight:700; cursor:pointer;
+    box-shadow:0 10px 20px rgba(0,0,0,.35); transition:.12s transform,.12s box-shadow;
+  }
+  .settings-btn:active{ transform:translateY(1px) scale(.98); box-shadow:0 6px 14px rgba(0,0,0,.35) }
+
+  /* Header row: question left, big randomizer on RIGHT */
+  .header{display:grid; grid-template-columns:1fr auto; gap:12px; align-items:stretch}
+  #randomBtn{
+    background:radial-gradient(120% 120% at 10% 0%, var(--brand2), var(--brand1));
+    color:#06121a; font-weight:900; font-size:clamp(16px,2.2vw,24px);
+    border:none; border-radius:18px; padding:16px 18px; cursor:pointer;
+    box-shadow:0 14px 30px rgba(67,97,238,.35), 0 0 0 0 rgba(67,97,238,.35);
+    transition:transform .12s ease, box-shadow .2s ease;
+  }
+  #randomBtn:hover{ box-shadow:0 18px 36px rgba(67,97,238,.45), 0 0 24px 4px rgba(167,139,250,.25) }
+  #randomBtn:active{ transform:translateY(1px) scale(.98); box-shadow:0 10px 20px rgba(67,97,238,.35)}
+  .question{display:flex; align-items:center; font-size:clamp(22px,4vw,48px); font-weight:900; letter-spacing:.2px; padding:10px 12px; background:rgba(15,23,42,.6); border:1px solid var(--stroke); border-radius:16px}
+
+  /* Stage contains zones + parking and hosts badges absolutely */
+  .stage{position:relative; display:grid; grid-template-rows:auto auto; gap:12px; min-height:0}
+  #badgeLayer{position:absolute; inset:0; z-index:20}
+  .zones{display:grid; gap:12px; grid-auto-rows:minmax(220px,1fr)}
+  .zone{position:relative;border-radius:20px;border:2px dashed #94a3b8;padding:12px;box-shadow:0 12px 36px rgba(0,0,0,.18) inset}
+  .zone h3{margin:0 0 8px 0;font-size:clamp(16px,2.1vw,26px);font-weight:900;color:#0b1020;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+  .blue{background:var(--p-blue); border-color:var(--p-blue-b)}
+  .red{background:var(--p-red); border-color:var(--p-red-b)}
+  .green{background:var(--p-green); border-color:var(--p-green-b)}
+  .purple{background:var(--p-purple); border-color:var(--p-purple-b)}
+  .yellow{background:var(--p-yellow); border-color:var(--p-yellow-b)}
+
+  .parking{background:#0b1226;border-radius:18px;border:1px solid var(--stroke);padding:10px;min-height:140px}
+  .parking h3{margin:0 0 6px;font-size:18px;font-weight:800;color:#cbd5e1}
+  #parkingPad{position:relative;min-height:180px; border:1px dashed #334155; border-radius:12px}
+
+  /* Badges */
+  .badge{position:absolute;touch-action:none;user-select:none;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-weight:800;font-size:clamp(14px,1.8vw,20px);color:#0b1226;background:linear-gradient(180deg,#f8fafc,#e2e8f0);box-shadow:0 10px 22px rgba(0,0,0,.35);border:2px solid #0f172a}
+  .badge.teacher{ background:linear-gradient(180deg,#fff7d6,#fde68a); border-color:#b45309 }
+  .badge[data-absent="true"]{background:linear-gradient(180deg,#ffe4e6,#fecaca)}
+  .badge.spinning{outline:4px solid var(--warn)}
+  .badge.winner{outline:6px solid var(--ok)}
+
+  .footer{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .footer .stat{background:#0b1226;border:1px solid var(--stroke);border-radius:12px;padding:6px 10px}
+
+  /* Modals */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+  .modal.show{display:flex}
+  .sheet{width:min(1080px,95vw);max-height:90vh;overflow:auto;background:#0b1226;border:1px solid var(--stroke);border-radius:18px;padding:18px;box-shadow:0 22px 64px rgba(0,0,0,.5)}
+  .sheet h2{margin:0 0 10px}
+  .sheet section{border:1px solid #1f2937;border-radius:14px;padding:12px;margin:10px 0;background:#0c1428}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .sheet input,.sheet select,.sheet textarea, .sheet button{
+    font-size:16px;border-radius:12px;border:1px solid #334155;background:#0b1226;color:var(--ink);padding:10px 12px;transition:.12s transform,.12s box-shadow
+  }
+  .sheet button{box-shadow:0 8px 18px rgba(0,0,0,.35)}
+  .sheet button:active{transform:translateY(1px) scale(.98); box-shadow:0 6px 12px rgba(0,0,0,.35)}
+  .answers-grid{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .answers-grid .a{display:flex;gap:8px;align-items:center}
+  .answers-grid .lbl{width:88px; font-weight:800; text-align:right; opacity:.9}
+  .answers-grid input{flex:1}
+  .tip{font-size:12px;color:#94a3b8}
+
+  .toast{position:fixed;bottom:16px;right:16px;background:#0b1226;color:var(--ink);border:1px solid var(--stroke);border-radius:12px;padding:10px 14px;opacity:0;transform:translateY(8px);transition:.25s;z-index:120}
+  .toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<button class="settings-btn" id="openSettings">⚙️ Settings</button>
+
+<div class="app" id="app">
+  <div class="header">
+    <div class="question" id="question">Loading question…</div>
+    <button id="randomBtn">🎡 Pick Random Student</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="zones" id="zones"></div>
+    <div class="parking" id="parking">
+      <h3>🅿️ Parking Lot / Absent</h3>
+      <div id="parkingPad"></div>
+    </div>
+    <div id="badgeLayer"></div>
+  </div>
+
+  <div class="footer" id="footer">
+    <span class="stat" id="statPlaced">Placed: 0</span>
+    <span class="stat" id="statAbsent">Absent (not placed): 0</span>
+  </div>
+</div>
+
+<!-- SETTINGS (big) -->
+<div class="modal" id="settingsModal"><div class="sheet">
+  <h2>⚙️ Settings</h2>
+
+  <section>
+    <div class="row">
+      <label style="min-width:140px;font-weight:800">Question</label>
+      <input id="qInput" placeholder="Daily question (or generate with AI)" style="flex:1" />
+    </div>
+    <div class="row">
+      <label style="min-width:140px;font-weight:800">Keywords</label>
+      <input id="keywordInput" placeholder="e.g., friendship, patterns, weather" style="flex:1" />
+      <button id="presetMood">🟦🟥🟨🟩 Mood Checker</button>
+    </div>
+    <div class="row">
+      <label style="min-width:140px;font-weight:800">Options</label>
+      <select id="choiceCount">
+        <option value="2">2 choices</option>
+        <option value="3">3 choices</option>
+        <option value="4" selected>4 choices</option>
+        <option value="open">Open (1 bin)</option>
+      </select>
+      <button id="genBtn">✨ Generate with AI</button>
+      <button id="aiBtn">🤖 AI Settings</button>
+    </div>
+
+    <div id="answersWrap">
+      <div class="answers-grid">
+        <div class="a"><div class="lbl">Answer A</div><input id="a1" value="🍞 Toast"></div>
+        <div class="a"><div class="lbl">Answer B</div><input id="a2" value="🥣 Cereal"></div>
+        <div class="a"><div class="lbl">Answer C</div><input id="a3" value="🍳 Eggs"></div>
+        <div class="a"><div class="lbl">Answer D</div><input id="a4" value="🍎 Fruit"></div>
+      </div>
+      <div class="tip">Tip: Emojis are added automatically if you leave them out.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="row">
+      <button id="openRoster">👥 Edit Roster</button>
+      <span class="tip">Teacher badge is added automatically and excluded from attendance + randomizer.</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="row" style="gap:12px">
+      <button id="saveBtn">💾 Save Layout</button>
+      <button id="loadBtn">⭳ Load Layout</button>
+      <button id="allToParkingBtn">🅿️ All to Parking</button>
+      <button id="resetBtn">↩︎ Reset Positions + Clear Weekly Picks</button>
+      <button id="resetWeekBtn">🗓️ Reset Week (no layout change)</button>
+    </div>
+  </section>
+
+  <div class="row" style="justify-content:flex-end;margin-top:8px">
+    <button id="applySettings" style="font-weight:900;padding:12px 18px">✅ OK</button>
+    <button id="closeSettings" style="padding:12px 18px">Close</button>
+  </div>
+</div></div>
+
+<!-- Roster Modal -->
+<div class="modal" id="rosterModal">
+  <div class="sheet">
+    <h2>👥 Edit roster (students only)</h2>
+    <p>Enter one student per line.</p>
+    <textarea id="rosterInput" style="width:100%;min-height:260px">Abdallah
+Robyn
+Layla
+Keerthy
+Hakim
+Melania
+Halo
+Abbas
+Penelope
+Harnoor
+Sean
+Su
+Caleb
+Elena
+Selena
+Anisha
+Iris
+Jazmine
+Alayna
+Shreyansh</textarea>
+    <div style="height:10px"></div>
+    <div class="row">
+      <button id="applyRoster">Apply roster</button>
+      <button id="closeRoster">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Config Modal -->
+<div class="modal" id="aiModal"><div class="sheet">
+  <h2>🤖 AI Question Generator</h2>
+  <p>Your settings are stored <b>locally</b> on this device unless you use an Apps Script proxy.</p>
+  <div class="row">
+    <label style="min-width:120px">Provider</label>
+    <select id="aiProvider">
+      <option value="gemini" selected>Gemini</option>
+      <option value="openai">OpenAI</option>
+    </select>
+  </div>
+  <div class="row">
+    <label style="min-width:120px">API Base URL</label>
+    <input id="aiBase" placeholder="OpenAI: https://api.openai.com/v1 • Apps Script: your .../exec URL • Gemini: leave blank" style="flex:1" />
+  </div>
+  <div class="row">
+    <label style="min-width:120px">API Key</label>
+    <input id="aiKey" placeholder="(Gemini or OpenAI key)" style="flex:1" />
+  </div>
+  <div class="row">
+    <label style="min-width:120px">Model</label>
+    <input id="aiModel" value="gemini-1.5-flash" style="flex:1" />
+  </div>
+  <div style="height:10px"></div>
+  <button id="aiSave">Save</button>
+  <button id="aiClose">Close</button>
+</div></div>
+
+<!-- Winner overlay -->
+<div class="modal" id="winnerModal"><div class="sheet" style="text-align:center">
+  <h2 id="winnerText" style="font-size:clamp(28px,4.8vw,60px); margin:0 0 8px"></h2>
+  <div id="winnerSub" style="font-size:clamp(18px,2.4vw,30px); opacity:.9"></div>
+  <div style="height:14px"></div>
+  <button id="closeWinner">OK</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $  = s=>document.querySelector(s);
+  const $$ = s=>Array.from(document.querySelectorAll(s));
+
+  const app = $('#app'), stage = $('#stage'), zonesEl = $('#zones'), questionEl = $('#question'), toast = $('#toast'), badgeLayer = $('#badgeLayer');
+
+  let roster = [], badges = [], drag = null;
+  let pickedSet = new Set();
+
+  const TEACHER_NAME = "Mr. Cushman"; // visible but ignored for attendance/randomizer
+  const OPEN_LABEL = "🗣️ I’ve got my answer and I’m ready to explain why.";
+
+  const moodPreset = Object.freeze({
+    q: 'What Zone are you in??',
+    choices: [ '😢 Blue Zone', '😡 Red Zone', '😊 Yellow Zone', '🙂 Green Zone' ],
+    colors:  [ 'blue', 'red', 'yellow', 'green' ]
+  });
+
+  /* ---------- utils ---------- */
+  function showToast(msg){ toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); }
+  function rect(el){ return el.getBoundingClientRect(); }
+  function center(el){ const r=rect(el); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
+  function within(p, el){ const r=rect(el); return p.x>=r.left && p.x<=r.right && p.y>=r.top && p.y<=r.bottom; }
+  function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+  function load(k,f){ try{ const v=JSON.parse(localStorage.getItem(k)); return v??f; }catch{return f;} }
+  function stageOffset(){ const r=rect(stage); return {x:r.left, y:r.top}; }
+
+  // Emoji helper (avoid duplicates if choice already starts with an emoji)
+  function addEmojiToChoice(choice){
+    const s = choice.trim();
+    if (/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(s)) return choice; // already emoji-prefixed
+    const lower = s.toLowerCase();
+    const map = [
+      [/apple|fruit/, "🍎"], [/banana/, "🍌"], [/bread|toast/, "🍞"], [/cereal|granola|oat/, "🥣"], [/egg/, "🍳"], [/milk/, "🥛"],
+      [/soccer|football/, "⚽"], [/book|read/, "📖"], [/friend|help|kind|share|include/, "🤝"], [/play/, "🎲"],
+      [/rain|umbrella/, "☔"], [/snow|cold/, "❄️"], [/sun|hot|sunny/, "☀️"], [/jacket|coat/, "🧥"],
+      [/alone/, "🧍"], [/partner|group|team/, "👫"], [/compliment/, "💐"], [/invite/, "📨"],
+      [/pattern|sequence/, "🔄"], [/color|colour/, "🎨"], [/size/, "📏"], [/shape|triangle|circle|square/, "🔺"], [/sound|music/, "🔊"]
+    ];
+    for(const [re,emo] of map){ if(re.test(lower)) return emo+" "+choice; }
+    return "🎲 "+choice;
+  }
+
+  /* ---------- JSON lenient parser ---------- */
+  function parseJSONLenient(txt){
+    try{ return JSON.parse(txt); }catch{}
+    const m = txt.match(/\{[\s\S]*\}/);
+    if(m){ try{ return JSON.parse(m[0]); }catch{} }
+    return null;
+  }
+
+  /* ---------- JSONP helper for Apps Script proxy ---------- */
+  function jsonp(url, params) {
+    return new Promise((resolve, reject) => {
+      const cbName = 'jsonp_cb_' + Math.random().toString(36).slice(2);
+      params = params || {};
+      params.callback = cbName;
+      const qs = Object.entries(params).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+      const s = document.createElement('script');
+      s.src = url + (url.includes('?') ? '&' : '?') + qs;
+      window[cbName] = (data) => { delete window[cbName]; s.remove(); resolve(data); };
+      s.onerror = () => { delete window[cbName]; s.remove(); reject(new Error('JSONP load error')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* ---------- weekly memory ---------- */
+  function weekKey(d=new Date()){
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = date.getUTCDay()||7;
+    date.setUTCDate(date.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+    const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+    return date.getUTCFullYear() + '-W' + String(weekNo).padStart(2,'0');
+  }
+  function ensureWeek(){
+    const cur = weekKey();
+    const stored = load('mxq_week_key');
+    if(stored !== cur){ save('mxq_week_key', cur); save('mxq_picked', []); pickedSet.clear(); }
+    else { pickedSet = new Set(load('mxq_picked', [])); }
+  }
+  function persistPicked(){ save('mxq_picked', Array.from(pickedSet)); }
+
+  /* ---------- zones ---------- */
+  function setGridColumns(n){ zonesEl.style.gridTemplateColumns = `repeat(${n}, minmax(0, 1fr))`; }
+  function buildZones(choices, colors){
+    zonesEl.innerHTML = '';
+    setGridColumns(choices.length);
+    for(let i=0;i<choices.length;i++){
+      const z = document.createElement('div');
+      z.className = 'zone ' + (colors?.[i] || ['blue','red','green','purple'][i%4]);
+      z.dataset.zone = i;
+      const h = document.createElement('h3'); h.textContent = choices[i];
+      z.appendChild(h); zonesEl.appendChild(z);
+    }
+  }
+
+  /* ---------- counts / modes ---------- */
+  function applyChoicesFrom(mode, lines){
+    let choices = [];
+    if(mode === 'open'){
+      choices = [OPEN_LABEL];
+    } else {
+      const count = Math.max(2, Math.min(4, parseInt(mode,10) || 4));
+      choices = lines.slice(0, count);
+      // auto-emoji
+      choices = choices.map(addEmojiToChoice);
+    }
+    const colors = choices.map((_,i)=> (i<4? ['blue','red','green','purple'][i] : ['yellow','blue','red','green'][i%4]));
+    buildZones(choices, colors);
+    const saved = load('mxq_choices_v8') || {};
+    save('mxq_choices_v8', {q:saved.q || questionEl.textContent, choices, colors, mode});
+    relabelBadges(); updateStats();
+  }
+
+  /* ---------- settings modal helpers ---------- */
+  function openSettings(){
+    // Prefill fields
+    const saved = load('mxq_choices_v8');
+    $('#qInput').value = saved?.q || questionEl.textContent;
+    const mode = saved?.mode || '4';
+    $('#choiceCount').value = mode;
+    const fields = ['a1','a2','a3','a4'];
+    const currentChoices = saved?.choices || $$('.zone h3').map(h=>h.textContent.trim());
+    fields.forEach((id,idx)=> $('#'+id).value = (currentChoices[idx]||''));
+    toggleAnswerFields(mode);
+    $('#settingsModal').classList.add('show');
+  }
+  function toggleAnswerFields(mode){
+    const grid = $('.answers-grid');
+    grid.style.display = (mode==='open') ? 'none' : 'grid';
+    if(mode==='2'){ $('#a3').parentElement.style.display='none'; $('#a4').parentElement.style.display='none'; $('#a1').parentElement.style.display='flex'; $('#a2').parentElement.style.display='flex'; }
+    if(mode==='3'){ $('#a3').parentElement.style.display='flex'; $('#a4').parentElement.style.display='none'; $('#a1').parentElement.style.display='flex'; $('#a2').parentElement.style.display='flex'; }
+    if(mode==='4'){ $('#a1').parentElement.style.display='flex'; $('#a2').parentElement.style.display='flex'; $('#a3').parentElement.style.display='flex'; $('#a4').parentElement.style.display='flex'; }
+  }
+  function applySettings(){
+    const mode = $('#choiceCount').value;
+    const q = $('#qInput').value.trim() || 'Question of the Day';
+    let lines = [];
+    if(mode!=='open'){
+      lines = [$('#a1').value, $('#a2').value, $('#a3').value, $('#a4').value].map(s=>s.trim()).filter(Boolean);
+    }
+    questionEl.textContent = q;
+    applyChoicesFrom(mode, lines);
+    const saved = load('mxq_choices_v8')||{};
+    save('mxq_choices_v8', {...saved, q});
+    $('#settingsModal').classList.remove('show');
+  }
+
+  /* ---------- roster ---------- */
+  function applyRoster(){
+    const txt = $('#rosterInput').value;
+    roster = txt.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    save('mxq_roster', roster);
+    makeBadges(); showToast('Roster applied');
+  }
+
+  function makeBadges(){
+    badgeLayer.innerHTML = '';
+    badges = [];
+    const base = rect($('#parkingPad')); const sOff = stageOffset();
+
+    // Teacher badge (ignored)
+    const t = document.createElement('div');
+    t.className = 'badge teacher';
+    t.textContent = TEACHER_NAME;
+    badgeLayer.appendChild(t);
+    t.dataset.zone = 'parking';
+    t.dataset.ignore = 'true';
+    t.style.left = (base.left - sOff.x + 12) + 'px';
+    t.style.top  = (base.top  - sOff.y + 12) + 'px';
+    enableDrag(t); badges.push(t);
+
+    // Students grid inside parking pad, below the header
+    const rowsGap = 60, colsGap = 150, cols=6;
+    roster.forEach((name, idx)=>{
+      const el = document.createElement('div'); el.className = 'badge';
+      el.textContent = name;
+      badgeLayer.appendChild(el);
+      const col=(idx+1)%cols, row=Math.floor((idx+1)/cols);
+      const x = (base.left - sOff.x) + 12 + col*colsGap;
+      const y = (base.top  - sOff.y) + 48 + row*rowsGap; // +48 to avoid Parking title
+      el.style.left = x+'px'; el.style.top = y+'px'; el.dataset.zone = 'parking';
+      enableDrag(el); badges.push(el);
+    });
+    updateStats();
+  }
+
+  function relabelBadges(){
+    const zEls = $$('.zone');
+    badges.forEach(b=>{
+      const c=center(b); let inAny=false;
+      for(const z of zEls){ if(within(c,z)){ b.dataset.zone=z.dataset.zone; inAny=true; break; } }
+      if(!inAny) b.dataset.zone='parking';
+    });
+  }
+
+  function updateStats(){
+    const isStudent = b => b.dataset.ignore !== 'true';
+    const placed = badges.filter(b=> isStudent(b) && b.dataset.zone!=='parking');
+    const totalStudents = badges.filter(isStudent).length;
+    const absent = totalStudents - placed.length;
+    $('#statPlaced').textContent = 'Placed: '+placed.length;
+    $('#statAbsent').textContent = 'Absent (not placed): '+absent;
+    badges.forEach(b=>{ b.dataset.absent = (b.dataset.zone==='parking' && isStudent(b)); });
+  }
+
+  /* ---------- drag ---------- */
+  function enableDrag(el){
+    el.addEventListener('pointerdown', (e)=>{ el.setPointerCapture(e.pointerId); const r=el.getBoundingClientRect(); drag={el,dx:e.clientX-r.left,dy:e.clientY-r.top}; });
+    el.addEventListener('pointermove', (e)=>{ if(!drag||drag.el!==el) return; const sOff=stageOffset(); const x=e.clientX-sOff.x-drag.dx; const y=e.clientY-sOff.y-drag.dy; el.style.left=x+"px"; el.style.top=y+"px"; });
+    el.addEventListener('pointerup', ()=>{ if(!drag||drag.el!==el) return; settle(el); drag=null; });
+  }
+  function settle(el){
+    const pt = center(el); const zEls = $$('.zone'); let zoned='parking';
+    for(const z of zEls){ if(within(pt,z)){ zoned=z.dataset.zone; break; } }
+    el.dataset.zone = zoned; updateStats();
+  }
+
+  function allToParking(){
+    const base = rect($('#parkingPad')); const sOff = stageOffset();
+    let idx = 0;
+    badges.forEach((el)=>{
+      if(el.dataset.ignore==='true'){ // teacher stays top-left
+        el.style.left = (base.left - sOff.x + 12) + 'px';
+        el.style.top  = (base.top  - sOff.y + 12) + 'px';
+        el.dataset.zone='parking';
+        return;
+      }
+      const cols=6, col=(idx+1)%cols, row=Math.floor((idx+1)/cols); idx++;
+      const x = (base.left - sOff.x) + 12 + col*150;
+      const y = (base.top  - sOff.y) + 48 + row*60;
+      el.style.left=x+'px'; el.style.top=y+'px'; el.dataset.zone='parking';
+    });
+    updateStats();
+  }
+
+  function resetPositions(){
+    allToParking();
+    pickedSet.clear(); persistPicked();
+    showToast('Positions reset and weekly picks cleared');
+  }
+
+  function resetWeekOnly(){
+    pickedSet.clear(); persistPicked();
+    showToast('Weekly picks cleared');
+  }
+
+  /* ---------- randomizer (1.5x longer, weekly non-repeats, ignores teacher) ---------- */
+  function randomPick(){
+    const placed = badges.filter(b=> b.dataset.zone!=='parking' && b.dataset.ignore!=='true');
+    let pool = placed.filter(b=> !pickedSet.has(b.textContent.trim()));
+    if(pool.length===0){
+      pickedSet.clear(); persistPicked();
+      pool = placed.slice();
+      if(pool.length===0){ showToast('No placed names yet.'); return; }
+      showToast('New round this week!');
+    }
+    pool.forEach(b=>b.classList.remove('spinning','winner'));
+    const roundsBase = Math.max(24, 6 + pool.length*2);
+    const rounds = Math.floor(roundsBase * 1.5);
+    const baseDelay=40; let i=0;
+
+    function tick(){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(), g=ctx.createGain(); o.type='square'; o.frequency.value=800+Math.random()*200; g.gain.setValueAtTime(0.08, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.08); o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.09); setTimeout(()=>ctx.close(),120);}catch(e){} }
+    function win(){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(), g=ctx.createGain(); o.type='triangle'; o.frequency.value=620; g.gain.setValueAtTime(0.001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.5); o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.55); setTimeout(()=>ctx.close(),600);}catch(e){} }
+
+    function step(){
+      pool.forEach(b=>b.classList.remove('spinning'));
+      const idx=i%pool.length; pool[idx].classList.add('spinning'); tick(); i++;
+      const p=i/rounds; const d=baseDelay + p*p*260;
+      if(i<rounds){ setTimeout(step,d); }
+      else {
+        pool.forEach(b=>b.classList.remove('spinning','winner'));
+        const winner=pool[(i-1)%pool.length]; winner.classList.add('winner'); win();
+        const z=winner.dataset.zone; let answer=''; const zEl=document.querySelector(`.zone[data-zone="${z}"] h3`); if(zEl) answer=zEl.textContent.trim();
+        const name=winner.textContent.trim(); pickedSet.add(name); persistPicked();
+        $('#winnerText').textContent = name;
+        $('#winnerSub').textContent = (answer? `${name}, please explain your answer: ${answer} 🙂` : `${name}, please explain your answer 🙂`);
+        $('#winnerModal').classList.add('show');
+      }
+    }
+    step();
+  }
+
+  /* ---------- local generator ---------- */
+  function matchTheme(kw){
+    if(!kw) return 'general';
+    if(/friend|kind|include/.test(kw)) return 'friendship';
+    if(/pattern|sort|group/.test(kw)) return 'patterns';
+    if(/weather|rain|snow|sun|season/.test(kw)) return 'weather';
+    if(/community|class|respect|responsib/.test(kw)) return 'community';
+    if(/grow|challenge|strategy|brain/.test(kw)) return 'growth';
+    if(/fair|equity|equal/.test(kw)) return 'fairness';
+    if(/animal|pet|wild|zoo|habitat/.test(kw)) return 'animals';
+    if(/grateful|thank|gratitude/.test(kw)) return 'gratitude';
+    return 'general';
+  }
+  function localGenerateQnA(count, kw){
+    const theme = matchTheme((kw||'').toLowerCase());
+    const banks = {
+      general: {
+        q: ['Which choice fits you best today? Explain why.','What would help our class most today? Tell why.'],
+        a: [['Work alone','Work with a partner','Ask a teacher','Try a new strategy']]
+      },
+      friendship:{
+        q: ['Which shows being a good friend? Explain.','How can we include others today? Pick and tell why.'],
+        a: [['Invite to play','Share supplies','Give a compliment','Listen first']]
+      },
+      patterns:{
+        q: ['Which shows a pattern you notice? Explain it.','Which could you sort by rule? Tell the rule.'],
+        a: [['Size pattern','Color pattern','Shape pattern','Sound pattern']]
+      },
+      weather:{
+        q: ['Which matches today’s weather? Explain clues.','What should we wear today? Pick and tell why.'],
+        a: [['Raincoat','Sweater','T-shirt','Snow boots']]
+      },
+      community:{
+        q: ['Which helps our classroom community? Explain.','Which shows respect today? Tell why.'],
+        a: [['Take turns','Use quiet voices','Clean up','Help a classmate']]
+      }
+    };
+    const b = banks[theme] || banks.general;
+    const q = b.q[Math.floor(Math.random()*b.q.length)];
+    const a4 = b.a[Math.floor(Math.random()*b.a.length)];
+    const a = (count>=4? a4 : a4.slice(0,count)).map(addEmojiToChoice);
+    return {question:q, choices:a};
+  }
+
+  /* ---------- AI (Gemini/OpenAI or Apps Script proxy) ---------- */
+  async function aiGeminiQnA(count, kw, model, key){
+    const prompt = `Create one Grade 2 discussion question and ${count} simple, distinct answer options.
+- The question is ONE sentence, concrete, and invites explanation.
+- Return JSON ONLY exactly as: {"question":"...","choices":["..."]} with exactly ${count} choices that MATCH the question.
+- Topic keywords: ${kw||'none'}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model||'gemini-1.5-flash')}:generateContent?key=${encodeURIComponent(key)}`;
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }]}] }) });
+    if(!res.ok) throw new Error('Gemini request failed');
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(' ').trim() || '';
+    const obj = parseJSONLenient(text);
+    if(!obj) throw new Error('Bad AI JSON');
+    return obj;
+  }
+  async function aiOpenAIQnA(count, kw, model, base, key){
+    const sys = "You output only JSON. Create one Grade 2 discussion question and simple options.";
+    const user = `Return JSON: {"question":"...","choices":["..."]} with exactly ${count} choices. Keywords: ${kw||'none'}. Keep the question one sentence, concrete, and explanation-friendly.`;
+    const res = await fetch(`${base||'https://api.openai.com/v1'}/chat/completions`,{
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+      body: JSON.stringify({model: model||'gpt-4o-mini', messages:[{role:'system',content:sys},{role:'user',content:user}], temperature:0.7, max_tokens:180})
+    });
+    if(!res.ok) throw new Error('OpenAI request failed');
+    const data = await res.json();
+    const t = (data.choices?.[0]?.message?.content || '').trim();
+    const obj = parseJSONLenient(t);
+    if(!obj) throw new Error('Bad AI JSON');
+    return obj;
+  }
+  async function aiProxyQnA(proxyUrl, count, kw){
+    const data = await jsonp(proxyUrl, { kw: kw || '', count: count || 4 });
+    if (!data || typeof data.question!=='string' || !Array.isArray(data.choices)) throw new Error('Bad proxy payload');
+    return data;
+  }
+
+  async function getQnA(count, kw){
+    const provider = load('mxq_ai_provider') || 'gemini';
+    const key = load('mxq_ai_key');
+    const base = load('mxq_ai_base') || '';
+    const model = load('mxq_ai_model') || (provider==='gemini' ? 'gemini-1.5-flash' : 'gpt-4o-mini');
+
+    // Prefer proxy if base is Apps Script
+    if (/script\.google\.com\/macros\/s\/.*\/exec/i.test(base)) {
+      try { return await aiProxyQnA(base, count, kw); }
+      catch(e){ console.warn('Proxy error', e); return localGenerateQnA(count, kw); }
+    }
+
+    if(!key){ return localGenerateQnA(count, kw); }
+
+    try{
+      const obj = (provider==='gemini')
+        ? await aiGeminiQnA(count, kw, model, key)
+        : await aiOpenAIQnA(count, kw, model, base, key);
+      let choices = Array.isArray(obj.choices) ? obj.choices.slice(0,count) : [];
+      if(choices.length!==count) { return localGenerateQnA(count, kw); }
+      choices = choices.map(c=>addEmojiToChoice(String(c)));
+      return { question: String(obj.question||'Which choice fits you best today? Explain why.'), choices };
+    }catch(e){
+      console.warn('AI error:', e);
+      return localGenerateQnA(count, kw);
+    }
+  }
+
+  /* ---------- wiring ---------- */
+  // Settings
+  $('#openSettings').onclick = openSettings;
+  $('#closeSettings').onclick = ()=>$('#settingsModal').classList.remove('show');
+  $('#choiceCount').onchange = (e)=> toggleAnswerFields(e.target.value);
+  $('#applySettings').onclick = applySettings;
+
+  // Roster
+  $('#openRoster').onclick = ()=>$('#rosterModal').classList.add('show');
+  $('#closeRoster').onclick = ()=>$('#rosterModal').classList.remove('show');
+  $('#applyRoster').onclick = ()=>{ applyRoster(); $('#rosterModal').classList.remove('show'); };
+
+  // AI config
+  $('#aiBtn').onclick = ()=>{
+    $('#aiProvider').value = load('mxq_ai_provider')||'gemini';
+    $('#aiBase').value = load('mxq_ai_base')||'';
+    $('#aiKey').value  = load('mxq_ai_key')||'';
+    $('#aiModel').value= load('mxq_ai_model')||'gemini-1.5-flash';
+    $('#aiModal').classList.add('show');
+  };
+  $('#aiSave').onclick = ()=>{
+    save('mxq_ai_provider', $('#aiProvider').value);
+    save('mxq_ai_base', $('#aiBase').value.trim());
+    save('mxq_ai_key',  $('#aiKey').value.trim());
+    save('mxq_ai_model',$('#aiModel').value.trim());
+    $('#aiModal').classList.remove('show');
+    showToast('AI settings saved locally');
+  };
+  $('#aiClose').onclick = ()=>$('#aiModal').classList.remove('show');
+
+  // Generate with AI (fills the fields in Settings)
+  $('#genBtn').onclick = async ()=>{
+    const mode = $('#choiceCount').value;
+    const kw = $('#keywordInput').value;
+    const count = (mode==='open') ? 1 : parseInt(mode,10);
+    const qna = (count===1) ? await getQnA(4, kw) : await getQnA(count, kw); // generate 4 for richness; open uses only question
+    $('#qInput').value = qna.question;
+    if(mode!=='open'){
+      const arr = qna.choices.slice(0, parseInt(mode,10));
+      $('#a1').value = arr[0]||''; $('#a2').value = arr[1]||''; $('#a3').value = arr[2]||''; $('#a4').value = arr[3]||'';
+    }
+    showToast('AI suggestion ready — review and press OK');
+  };
+
+  // Randomizer
+  $('#randomBtn').onclick = randomPick;
+  $('#closeWinner').onclick = ()=>$('#winnerModal').classList.remove('show');
+
+  // Layout save/load/reset
+  $('#saveBtn').onclick = ()=>{ const layout=badges.map(b=>({ name:b.textContent.trim(), left:b.style.left, top:b.style.top, zone:b.dataset.zone, ig:b.dataset.ignore==='true' })); save('mxq_layout', layout); showToast('Layout saved'); };
+  $('#loadBtn').onclick = ()=>{ const layout=load('mxq_layout'); if(!layout){ showToast('No saved layout found'); return; } const map=new Map(layout.map(x=>[x.name,x])); badges.forEach(b=>{ const rec=map.get(b.textContent.trim()); if(rec){ b.style.left=rec.left; b.style.top=rec.top; b.dataset.zone=rec.zone; } }); updateStats(); showToast('Layout loaded'); };
+  $('#allToParkingBtn').onclick = allToParking;
+  $('#resetBtn').onclick = resetPositions;
+  $('#resetWeekBtn').onclick = resetWeekOnly;
+
+  /* ---------- init ---------- */
+  async function boot(){
+    ensureWeek();
+
+    // roster (students only; teacher badge added separately)
+    const savedRoster = load('mxq_roster');
+    roster = savedRoster ? savedRoster : $('#rosterInput').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    makeBadges();
+
+    // auto-generate 4-choice on load
+    const qna = await getQnA(4, '');
+    questionEl.textContent = qna.question || 'Which choice fits you best today? Explain why.';
+    applyChoicesFrom('4', qna.choices && qna.choices.length ? qna.choices : ['Work alone','Work with a partner','Ask a teacher','Try a new strategy']);
+    updateStats();
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

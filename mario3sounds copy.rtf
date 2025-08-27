@@ -1,0 +1,185 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 <!DOCTYPE html>\
+<html lang="en">\
+<head>\
+  <meta charset="utf-8" />\
+  <meta name="viewport" content="width=device-width, initial-scale=1" />\
+  <title>SMB3 SFX \'96 Student Picker Hooks</title>\
+  <style>\
+    body\{font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Inter,Arial,sans-serif;margin:24px;line-height:1.4\}\
+    button\{margin:.25rem .5rem .25rem 0;padding:.5rem .8rem;border-radius:10px;border:1px solid #ddd;background:#fff;cursor:pointer\}\
+    #log\{margin-top:10px;font-size:12px;color:#555;white-space:pre-wrap\}\
+  </style>\
+</head>\
+<body>\
+  <h1>Super Mario Bros. 3 SFX \'96 ready for Cursor</h1>\
+  <p>Drop your audio files here: <code>assets/sfx/</code><br>\
+  Expected files:\
+  <ul>\
+    <li><code>smb3_coin.wav</code> \'96 coin pickup (use for tick)</li>\
+    <li><code>smb3_1up.wav</code> \'96 1\uc0\u8209 UP chime (use for winner)</li>\
+    <li><code>smb3_shuffle.wav</code> \'96 optional loop for acceleration bed</li>\
+    <li><code>smb3_item_select.wav</code> \'96 optional UI confirm</li>\
+  </ul>\
+  </p>\
+\
+  <div>\
+    <button id="init">Unlock Audio</button>\
+    <button id="demo-spin">Demo: Spin \uc0\u8594  Slow \u8594  Winner</button>\
+    <button id="tick-fast">Tick (fast)</button>\
+    <button id="tick-slow">Tick (slow)</button>\
+    <button id="winner">Winner (1\uc0\u8209 UP)</button>\
+    <button id="shuffle-on">Shuffle Loop \uc0\u9654 \u65038 </button>\
+    <button id="shuffle-off">Shuffle Loop \uc0\u9632 </button>\
+  </div>\
+  <div id="log"></div>\
+\
+  <script>\
+    // ------------------ CONFIG: path + files ------------------\
+    const SOUND_FILES = \{\
+      coin:    'assets/sfx/smb3_coin.wav',\
+      oneup:   'assets/sfx/smb3_1up.wav',\
+      shuffle: 'assets/sfx/smb3_shuffle.wav',    // optional\
+      select:  'assets/sfx/smb3_item_select.wav' // optional\
+    \};\
+\
+    // --------------- Simple AudioBank (Web Audio) ---------------\
+    class AudioBank \{\
+      constructor(files)\{\
+        this.files = files;\
+        this.buffers = \{\};\
+        this.ctx = null;\
+        this.master = null;\
+        this.loops = new Map();\
+        this.ready = false;\
+      \}\
+      getCtx()\{\
+        if(!this.ctx || this.ctx.state === 'closed')\{\
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)(\{latencyHint: 'interactive'\});\
+          this.master = this.ctx.createGain();\
+          this.master.gain.value = 0.9;\
+          this.master.connect(this.ctx.destination);\
+        \}\
+        if(this.ctx.state === 'suspended') this.ctx.resume();\
+        return this.ctx;\
+      \}\
+      async init()\{\
+        const ctx = this.getCtx();\
+        const entries = Object.entries(this.files);\
+        await Promise.all(entries.map(async([key, url]) => \{\
+          try\{\
+            const res = await fetch(url);\
+            if(!res.ok) throw new Error('fetch failed');\
+            const arr = await res.arrayBuffer();\
+            const buf = await ctx.decodeAudioData(arr);\
+            this.buffers[key] = buf;\
+          \}catch(e)\{\
+            console.warn('Audio load failed', key, url, e);\
+          \}\
+        \}));\
+        this.ready = true;\
+      \}\
+      play(name, \{volume=1, rate=1, detune=0\}=\{\})\{\
+        const ctx = this.getCtx();\
+        const buf = this.buffers[name];\
+        if(!buf) return;\
+        const src = ctx.createBufferSource();\
+        src.buffer = buf;\
+        src.playbackRate.value = rate;\
+        if('detune' in src) src.detune.value = detune; // cents\
+        const g = ctx.createGain(); g.gain.value = volume;\
+        src.connect(g).connect(this.master);\
+        src.start();\
+        return src;\
+      \}\
+      startLoop(name, \{volume=0.6, rate=1\}=\{\})\{\
+        this.stopLoop(name);\
+        const ctx = this.getCtx();\
+        const buf = this.buffers[name];\
+        if(!buf) return;\
+        const src = ctx.createBufferSource();\
+        src.buffer = buf; src.loop = true; src.playbackRate.value = rate;\
+        const g = ctx.createGain(); g.gain.value = volume;\
+        src.connect(g).connect(this.master);\
+        src.start();\
+        this.loops.set(name, \{src, g\});\
+      \}\
+      stopLoop(name)\{\
+        const rec = this.loops.get(name); if(!rec) return;\
+        try\{ rec.src.stop(); \}catch\{\}\
+        this.loops.delete(name);\
+      \}\
+      setVolume(name, v)\{ const rec = this.loops.get(name); if(rec) rec.g.gain.value = v; \}\
+    \}\
+\
+    // ------------------ Instantiate bank ------------------\
+    const SFX = new AudioBank(SOUND_FILES);\
+\
+    // ------------------ High-level hooks to use in your app ------------------\
+    // Tick that sounds like SMB3 coin; we modulate pitch & tiny jitter.\
+    function coinTick(progress)\{\
+      // progress: 0..1 from fast \uc0\u8594  slow\
+      const easing = (t)=>1-Math.pow(1-t,3); // easeOutCubic for rate drop\
+      const rate = 1.12 - easing(progress)*0.28; // 1.12 \uc0\u8594  ~0.84\
+      const jitterCents = (Math.random()*10 - 5); // \'b15 cents\
+      SFX.play('coin', \{ volume: 0.85, rate: Math.max(0.75, rate), detune: jitterCents \});\
+    \}\
+\
+    function tickFast()\{ SFX.play('coin', \{ volume: 0.85, rate: 1.1 \}); \}\
+    function tickSlow()\{ SFX.play('coin', \{ volume: 0.9,  rate: 0.92 \}); \}\
+\
+    function startShuffleBed()\{ SFX.startLoop('shuffle', \{ volume: 0.35, rate: 1 \}); \}\
+    function stopShuffleBed()\{  SFX.stopLoop('shuffle'); \}\
+\
+    // Winner = classic SMB3 1\uc0\u8209 UP\
+    function winnerSelected()\{\
+      // Tiny fade on any loop, then fire 1\uc0\u8209 UP\
+      stopShuffleBed();\
+      SFX.play('oneup', \{ volume: 0.95, rate: 1 \});\
+    \}\
+\
+    // ------------------ Demo wiring (you can delete) ------------------\
+    const log = (m)=>document.getElementById('log').textContent += m+"\\n";\
+    document.getElementById('init').onclick = async ()=>\{ await SFX.init(); log('Audio unlocked & buffers decoded.'); \};\
+\
+    // Simulated randomizer: 48 ticks total, accel\uc0\u8594 steady\u8594 decel\
+    document.getElementById('demo-spin').onclick = async ()=>\{\
+      if(!SFX.ready) await SFX.init();\
+      log('Demo spin\'85');\
+      startShuffleBed();\
+      const total = 48; let i = 0;\
+      const step = ()=>\{\
+        const p = i/total; // 0..1\
+        coinTick(p);\
+        // Delay profile: fast (38ms) \uc0\u8594  slower (up to ~240ms)\
+        const base = 38, max = 240;\
+        const ease = (t)=>1-Math.pow(1-t,3);\
+        const delay = base + (max-base)*ease(p) + (Math.random()*8-4); // \'b14ms jitter\
+        i++;\
+        if(i<total)\{ setTimeout(step, delay); \}\
+        else\{ stopShuffleBed(); setTimeout(()=>winnerSelected(), 120); log('Winner!'); \}\
+      \};\
+      step();\
+    \};\
+\
+    document.getElementById('tick-fast').onclick = async ()=>\{ if(!SFX.ready) await SFX.init(); tickFast(); \};\
+    document.getElementById('tick-slow').onclick = async ()=>\{ if(!SFX.ready) await SFX.init(); tickSlow(); \};\
+    document.getElementById('winner').onclick    = async ()=>\{ if(!SFX.ready) await SFX.init(); winnerSelected(); \};\
+    document.getElementById('shuffle-on').onclick  = async ()=>\{ if(!SFX.ready) await SFX.init(); startShuffleBed(); \};\
+    document.getElementById('shuffle-off').onclick = ()=> stopShuffleBed();\
+\
+    // ------------------ Integration Notes for Cursor ------------------\
+    // 1) Place audio files under assets/sfx as listed above.\
+    // 2) In your randomizer loop, call coinTick(i/rounds) each tick.\
+    // 3) Optionally call startShuffleBed() right when you start spinning; stop it when p>0.8.\
+    // 4) On winner, call winnerSelected().\
+    // 5) For UI selections elsewhere, use: SFX.play('select', \{ volume:0.6 \});\
+  </script>\
+</body>\
+</html>}

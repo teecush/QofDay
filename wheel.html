@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MX Daily Check‑In (Drag & Randomizer)</title>
+<style>
+  :root{
+    --bg:#0f172a;          /* slate-900 */
+    --card:#111827;        /* gray-900 */
+    --ink:#e5e7eb;         /* gray-200 */
+    --accent:#22d3ee;      /* cyan-400 */
+    --accent2:#a78bfa;     /* violet-400 */
+    --good:#34d399;        /* green-400 */
+    --warn:#fbbf24;        /* amber-300 */
+    --bad:#f87171;         /* red-400 */
+  }
+  html,body{height:100%; margin:0; background:linear-gradient(180deg,#0b1226,#0f172a 20%,#0b1226 100%); color:var(--ink); font-family:system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;}
+  .app{display:grid; grid-template-rows:auto auto 1fr auto; gap:10px; height:100%; padding:14px; box-sizing:border-box;}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+  .toolbar button,.toolbar input,.toolbar select{font-size:16px; border-radius:12px; border:1px solid #334155; background:#0b1226; color:var(--ink); padding:10px 14px}
+  .toolbar button{cursor:pointer; box-shadow:0 0 0 1px #1f2937 inset}
+  .toolbar button.primary{background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#0b1226; font-weight:700}
+  .toolbar .split{flex:1}
+
+  .board{display:grid; grid-template-columns:1fr; grid-template-rows:auto 1fr; gap:8px;}
+  .question{font-size: clamp(20px, 3.6vw, 44px); font-weight:800; letter-spacing:.2px}
+
+  .zones{display:grid; gap:10px; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows:minmax(160px, 1fr)}
+  @media (min-width:1100px){ .zones{grid-template-columns: repeat(4, minmax(0,1fr));} }
+
+  .zone{position:relative; background:#0b1226; border-radius:18px; border:2px dashed #334155; padding:10px; box-shadow:0 8px 30px rgba(0,0,0,.25) inset}
+  .zone h3{margin:0 0 10px 0; font-size: clamp(16px, 2.2vw, 28px); font-weight:800}
+  .zone.editable h3{border-bottom:1px dashed #334155}
+
+  .parking{background:#0b1226; border-radius:18px; border:2px solid #1f2937; padding:10px; margin-top:8px}
+  .parking h3{margin:0 0 8px; font-size:18px; font-weight:700; color:#cbd5e1}
+
+  .badge{position:absolute; touch-action:none; user-select:none; -webkit-user-select:none; -ms-user-select:none; display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; font-weight:700; font-size: clamp(14px, 1.8vw, 20px); color:#0b1226; background:linear-gradient(90deg,#e5e7eb,#cbd5e1); box-shadow: 0 6px 18px rgba(0,0,0,.45); border:2px solid #1f2937}
+  .badge[data-absent="true"]{background:linear-gradient(90deg,#fecaca,#fca5a5)}
+  .badge.small{transform:scale(.95)}
+  .badge .num{background:#0b1226; color:#a7f3d0; font-weight:900; font-size:.9em; padding:2px 8px; border-radius:999px}
+
+  .footer{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+  .footer .stat{background:#0b1226; border:1px solid #1f2937; border-radius:12px; padding:6px 10px}
+
+  /* modal */
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:50}
+  .modal.show{display:flex}
+  .sheet{width:min(900px,92vw); max-height:86vh; overflow:auto; background:#0b1226; border:1px solid #1f2937; border-radius:16px; padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .sheet h2{margin:0 0 10px}
+  .sheet textarea,.sheet input{width:100%; min-height:140px; background:#0b1226; color:var(--ink); border:1px solid #334155; border-radius:12px; padding:10px; font-size:16px}
+
+  .toast{position:fixed; bottom:16px; right:16px; background:#0b1226; color:var(--ink); border:1px solid #1f2937; border-radius:12px; padding:10px 14px; opacity:0; transform:translateY(8px); transition:.25s}
+  .toast.show{opacity:1; transform:translateY(0)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="toolbar">
+    <button id="editBtn">✏️ Edit question & choices</button>
+    <button id="rosterBtn">👥 Edit roster</button>
+    <label><input type="checkbox" id="restrictMoved"/> Randomize only from placed names</label>
+    <span class="split"></span>
+    <button id="randomBtn" class="primary">🎡 Pick Random Name</button>
+    <button id="resetBtn">↩︎ Reset positions</button>
+    <button id="saveBtn">💾 Save layout</button>
+    <button id="loadBtn">⭳ Load layout</button>
+  </div>
+
+  <div class="board">
+    <div class="question" id="question">What did you eat for breakfast?</div>
+
+    <div class="zones" id="zones">
+      <div class="zone" data-zone="0"><h3>🍞 Toast</h3></div>
+      <div class="zone" data-zone="1"><h3>🥣 Cereal</h3></div>
+      <div class="zone" data-zone="2"><h3>🍳 Eggs</h3></div>
+      <div class="zone" data-zone="3"><h3>🍎 Fruit</h3></div>
+    </div>
+  </div>
+
+  <div class="parking" id="parking">
+    <h3>🅿️ Parking Lot / Absent</h3>
+  </div>
+
+  <div class="footer" id="footer">
+    <span class="stat" id="statPlaced">Placed: 0</span>
+    <span class="stat" id="statAbsent">Absent (not placed): 0</span>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal" id="editModal">
+  <div class="sheet">
+    <h2>✏️ Edit question & choices</h2>
+    <label>Question</label>
+    <input id="qInput" placeholder="Type your daily question" />
+    <div style="height:8px"></div>
+    <label>Choices (2–6 lines; emojis allowed)</label>
+    <textarea id="choicesInput" placeholder="One choice per line">🍞 Toast
+🥣 Cereal
+🍳 Eggs
+🍎 Fruit</textarea>
+    <div style="height:10px"></div>
+    <button id="applyEdit">Apply</button>
+    <button id="closeEdit">Close</button>
+  </div>
+</div>
+
+<div class="modal" id="rosterModal">
+  <div class="sheet">
+    <h2>👥 Edit roster</h2>
+    <p>Enter one student per line. You can prefix an optional number (e.g., <code>6 - Sean</code>) if you like.
+    </p>
+    <textarea id="rosterInput" placeholder="One name per line">Mr. Cushman
+Abdallah
+Robyn
+Layla
+Keerthy
+Hakim
+Melania
+Halo
+Abbas
+Penelope
+Harnoor
+Sean
+Su
+Caleb
+Elena
+Selena
+Anisha
+Iris
+Jazmine
+Alayna
+Shreyansh</textarea>
+    <div style="height:10px"></div>
+    <button id="applyRoster">Apply roster</button>
+    <button id="closeRoster">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $ = s=>document.querySelector(s);
+  const $$ = s=>Array.from(document.querySelectorAll(s));
+
+  const app = $('#app');
+  const zonesEl = $('#zones');
+  const parking = $('#parking');
+  const questionEl = $('#question');
+  const toast = $('#toast');
+
+  // State
+  let roster = [];
+  let badges = []; // elements
+  let drag = null; // {el, dx, dy}
+
+  // Helpers
+  function showToast(msg){ toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); }
+  function rect(el){ return el.getBoundingClientRect(); }
+  function center(el){ const r=rect(el); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
+  function within(p, el){ const r=rect(el); return p.x>=r.left && p.x<=r.right && p.y>=r.top && p.y<=r.bottom; }
+  function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+  function load(key, fallback){ try{ const v=JSON.parse(localStorage.getItem(key)); return v??fallback; }catch{ return fallback; } }
+
+  // Build zones from textarea
+  function applyChoices(){
+    const lines = $('#choicesInput').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    const n = Math.max(2, Math.min(6, lines.length));
+    zonesEl.innerHTML = '';
+    for(let i=0;i<n;i++){
+      const z = document.createElement('div');
+      z.className = 'zone';
+      z.dataset.zone = i;
+      const h = document.createElement('h3');
+      h.textContent = lines[i];
+      z.appendChild(h);
+      zonesEl.appendChild(z);
+    }
+    questionEl.textContent = $('#qInput').value.trim() || 'Question of the Day';
+    save('mxq_choices', {q:questionEl.textContent, choices:lines});
+    layoutBadges(); // keep positions sensible after zone changes
+    updateStats();
+  }
+
+  function openEdit(){
+    const saved = load('mxq_choices');
+    if(saved){
+      $('#qInput').value = saved.q;
+      $('#choicesInput').value = saved.choices.join('\n');
+    } else {
+      $('#qInput').value = questionEl.textContent;
+    }
+    $('#editModal').classList.add('show');
+  }
+
+  // Roster
+  function applyRoster(){
+    roster = $('#rosterInput').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    save('mxq_roster', roster);
+    makeBadges();
+    showToast('Roster applied');
+  }
+
+  function makeBadges(){
+    // Clear existing badges
+    badges.forEach(b=>b.remove());
+    badges = [];
+
+    // Create new badges and put them in parking area at random positions
+    const base = rect(parking);
+    const appRect = rect(app);
+
+    roster.forEach((name, idx)=>{
+      const el = document.createElement('div');
+      el.className = 'badge';
+      const num = document.createElement('span');
+      num.className = 'num';
+      num.textContent = String(idx+1);
+      el.appendChild(num);
+      el.appendChild(document.createTextNode(' '+name));
+      app.appendChild(el);
+
+      // random starting positions in parking region
+      const x = base.left - appRect.left + 12 + (idx%4)*140;
+      const y = (base.top - appRect.top) + 50 + Math.floor(idx/4)*56;
+      el.style.left = x+'px';
+      el.style.top  = y+'px';
+      el.dataset.zone = 'parking';
+
+      enableDrag(el);
+      badges.push(el);
+    });
+    updateStats();
+  }
+
+  function layoutBadges(){
+    // nudge any badges that ended up outside after changes back into parking
+    const zEls = $$('.zone');
+    badges.forEach(b=>{
+      const c = center(b);
+      let inAny = false;
+      for(const z of zEls){ if(within(c, z)){ b.dataset.zone = z.dataset.zone; inAny=true; break; } }
+      if(!inAny){ b.dataset.zone = 'parking'; }
+    });
+  }
+
+  function updateStats(){
+    const placed = badges.filter(b=>b.dataset.zone!=='parking');
+    const absent = badges.length - placed.length;
+    $('#statPlaced').textContent = 'Placed: '+placed.length;
+    $('#statAbsent').textContent = 'Absent (not placed): '+absent;
+
+    // visually flag absent names
+    badges.forEach(b=>{ b.dataset.absent = (b.dataset.zone==='parking'); });
+  }
+
+  function enableDrag(el){
+    el.addEventListener('pointerdown', (e)=>{
+      el.setPointerCapture(e.pointerId);
+      const r = el.getBoundingClientRect();
+      drag = { el, dx: e.clientX - r.left, dy: e.clientY - r.top };
+    });
+    el.addEventListener('pointermove', (e)=>{
+      if(!drag || drag.el!==el) return;
+      const appR = rect(app);
+      const x = e.clientX - appR.left - drag.dx;
+      const y = e.clientY - appR.top  - drag.dy;
+      el.style.left = x+"px"; el.style.top = y+"px";
+    });
+    el.addEventListener('pointerup', (e)=>{
+      if(!drag || drag.el!==el) return;
+      settle(el);
+      drag = null;
+    });
+  }
+
+  function settle(el){
+    // decide which zone (if any) the center is inside
+    const pt = center(el);
+    const zEls = $$('.zone');
+    let zoned = 'parking';
+    for(const z of zEls){ if(within(pt, z)){ zoned = z.dataset.zone; break; } }
+    el.dataset.zone = zoned;
+    updateStats();
+  }
+
+  function resetPositions(){
+    const base = rect(parking); const appR = rect(app);
+    badges.forEach((el, idx)=>{
+      const x = base.left - appR.left + 12 + (idx%4)*140;
+      const y = (base.top - appR.top) + 50 + Math.floor(idx/4)*56;
+      el.style.left = x+'px'; el.style.top = y+'px';
+      el.dataset.zone = 'parking';
+    });
+    updateStats();
+  }
+
+  function randomPick(){
+    const restrict = $('#restrictMoved').checked;
+    let pool = badges;
+    if(restrict){ pool = badges.filter(b=>b.dataset.zone!=='parking'); }
+    if(pool.length===0){ showToast('No eligible names to pick.'); return; }
+    // simple visual highlight
+    pool.forEach(b=>b.style.outline='none');
+    const idx = Math.floor(Math.random()*pool.length);
+    const pick = pool[idx];
+    pick.style.outline = '4px solid var(--good)';
+    showToast('🎉 '+pick.textContent.trim());
+    // optional: remove winner from pool by sending back to parking (comment out if undesired)
+    // pick.dataset.zone = 'parking';
+    // updateStats();
+  }
+
+  function saveLayout(){
+    const layout = badges.map(b=>({ name:b.textContent.trim(), left:b.style.left, top:b.style.top, zone:b.dataset.zone }));
+    save('mxq_layout', layout);
+    showToast('Layout saved');
+  }
+  function loadLayout(){
+    const layout = load('mxq_layout');
+    if(!layout){ showToast('No saved layout found'); return; }
+    // If roster changed, we try best-effort match by name
+    const map = new Map(layout.map(x=>[x.name,x]));
+    badges.forEach(b=>{
+      const rec = map.get(b.textContent.trim());
+      if(rec){ b.style.left = rec.left; b.style.top = rec.top; b.dataset.zone = rec.zone; }
+    });
+    updateStats();
+    showToast('Layout loaded');
+  }
+
+  // Wire UI
+  $('#editBtn').onclick = openEdit;
+  $('#applyEdit').onclick = ()=>{ applyChoices(); $('#editModal').classList.remove('show'); };
+  $('#closeEdit').onclick = ()=>$('#editModal').classList.remove('show');
+
+  $('#rosterBtn').onclick = ()=>{
+    const saved = load('mxq_roster');
+    if(saved){ $('#rosterInput').value = saved.join('\n'); }
+    $('#rosterModal').classList.add('show');
+  };
+  $('#applyRoster').onclick = ()=>{ applyRoster(); $('#rosterModal').classList.remove('show'); };
+  $('#closeRoster').onclick = ()=>$('#rosterModal').classList.remove('show');
+
+  $('#randomBtn').onclick = randomPick;
+  $('#resetBtn').onclick = resetPositions;
+  $('#saveBtn').onclick = saveLayout;
+  $('#loadBtn').onclick = loadLayout;
+
+  // Init from storage
+  const savedQ = load('mxq_choices');
+  if(savedQ){ $('#qInput').value=savedQ.q; $('#choicesInput').value=savedQ.choices.join('\n'); applyChoices(); }
+  const savedRoster = load('mxq_roster');
+  if(savedRoster){ roster = savedRoster; } else { roster = $('#rosterInput').value.split(/\n+/).map(s=>s.trim()).filter(Boolean); }
+  makeBadges();
+})();
+</script>
+</body>
+</html>

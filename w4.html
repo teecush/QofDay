@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MX Daily Check‑In (Modern) — Drag • Randomize • Presets</title>
+<style>
+  :root{
+    /* base */
+    --bg:#0a0f1e; --panel:#0f172a; --ink:#e8eef7; --muted:#96a3b8; --stroke:#1e293b;
+    --brand1:#22d3ee; --brand2:#a78bfa; --ok:#34d399; --warn:#fbbf24; --err:#f87171;
+    /* pastels for bins */
+    --p-blue:#e8f3ff;   --p-blue-b:#93c5fd;
+    --p-red:#ffe7ea;    --p-red-b:#fda4af;
+    --p-green:#ecfff4;  --p-green-b:#86efac;
+    --p-purple:#f3e8ff; --p-purple-b:#c4b5fd;
+    --p-yellow:#fff7cc; --p-yellow-b:#fde68a;
+  }
+  html,body{height:100%;margin:0;background:radial-gradient(1200px 900px at 10% 0%, #0d1634, #0a0f1e 60%);color:var(--ink);font-family:Inter, ui-sans-serif, system-ui, Segoe UI, Roboto, Arial, sans-serif}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:14px;height:100%;padding:16px;box-sizing:border-box}
+  /* Sleek toolbar */
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(15,23,42,.6);border:1px solid var(--stroke);border-radius:18px;padding:10px 12px;backdrop-filter:blur(8px);box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  .toolbar button,.toolbar input,.toolbar select{font-size:16px;border-radius:12px;border:1px solid #334155;background:#0b1226;color:var(--ink);padding:10px 14px}
+  .toolbar input[type="text"]{min-width:260px}
+  .toolbar button{cursor:pointer;box-shadow:0 0 0 1px #263142 inset}
+  .toolbar button.primary{background:linear-gradient(90deg,var(--brand1),var(--brand2));color:#06121a;font-weight:800}
+  .toolbar .split{flex:1}
+
+  .question{font-size:clamp(22px,4.2vw,50px);font-weight:900;letter-spacing:.2px;margin:0 4px}
+
+  /* Board: zones on top, parking directly below, both visible without scrolling */
+  .board{display:grid;grid-template-rows:auto auto;gap:12px;min-height:0}
+
+  .zones{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(220px,1fr)}
+  @media (min-width:1100px){.zones{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(220px,1fr)}}
+
+  .zone{position:relative;border-radius:20px;border:2px dashed #94a3b8;padding:12px;box-shadow:0 12px 36px rgba(0,0,0,.18) inset}
+  .zone h3{margin:0 0 8px 0;font-size:clamp(16px,2.1vw,26px);font-weight:900;color:#0b1020;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+  .zone.blue{background:var(--p-blue);border-color:var(--p-blue-b)}
+  .zone.red{background:var(--p-red);border-color:var(--p-red-b)}
+  .zone.green{background:var(--p-green);border-color:var(--p-green-b)}
+  .zone.purple{background:var(--p-purple);border-color:var(--p-purple-b)}
+  .zone.yellow{background:var(--p-yellow);border-color:var(--p-yellow-b)}
+
+  /* Parking directly under zones */
+  .parking{background:#0b1226;border-radius:18px;border:1px solid var(--stroke);padding:10px;min-height:120px}
+  .parking h3{margin:0 0 6px;font-size:18px;font-weight:800;color:#cbd5e1}
+
+  /* Badges (no numbers now) */
+  .badge{position:absolute;touch-action:none;user-select:none;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-weight:800;font-size:clamp(14px,1.8vw,20px);color:#0b1226;background:linear-gradient(180deg,#f8fafc,#e2e8f0);box-shadow:0 10px 22px rgba(0,0,0,.35);border:2px solid #0f172a}
+  .badge[data-absent="true"]{background:linear-gradient(180deg,#ffe4e6,#fecaca)}
+  .badge.spinning{outline:4px solid var(--warn)}
+  .badge.winner{outline:6px solid var(--ok)}
+
+  .footer{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .footer .stat{background:#0b1226;border:1px solid var(--stroke);border-radius:12px;padding:6px 10px}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal.show{display:flex}
+  .sheet{width:min(980px,92vw);max-height:86vh;overflow:auto;background:#0b1226;border:1px solid var(--stroke);border-radius:18px;padding:16px;box-shadow:0 22px 64px rgba(0,0,0,.5)}
+  .sheet h2{margin:0 0 10px}
+  .sheet textarea,.sheet input,.sheet select{width:100%;min-height:44px;background:#0b1226;color:var(--ink);border:1px solid #334155;border-radius:12px;padding:10px;font-size:16px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  .toast{position:fixed;bottom:16px;right:16px;background:#0b1226;color:var(--ink);border:1px solid var(--stroke);border-radius:12px;padding:10px 14px;opacity:0;transform:translateY(8px);transition:.25s}
+  .toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="toolbar">
+    <button id="editBtn">✏️ Edit</button>
+    <button id="presetMood">🟦🟥🟨🟩 Mood Checker</button>
+    <input id="keywordInput" type="text" placeholder="Keywords (e.g., friendship, patterns)" />
+    <button id="genBtn">✨ Generate Question</button>
+    <span class="split"></span>
+    <button id="randomBtn" class="primary">🎡 Pick Random Name</button>
+    <button id="resetBtn">↩︎ Reset positions</button>
+    <button id="saveBtn">💾 Save layout</button>
+    <button id="loadBtn">⭳ Load layout</button>
+  </div>
+
+  <div class="question" id="question">What did you eat for breakfast?</div>
+
+  <div class="board">
+    <div class="zones" id="zones">
+      <div class="zone blue"   data-zone="0"><h3>🍞 Toast</h3></div>
+      <div class="zone red"    data-zone="1"><h3>🥣 Cereal</h3></div>
+      <div class="zone green"  data-zone="2"><h3>🍳 Eggs</h3></div>
+      <div class="zone purple" data-zone="3"><h3>🍎 Fruit</h3></div>
+    </div>
+
+    <div class="parking" id="parking">
+      <h3>🅿️ Parking Lot / Absent</h3>
+    </div>
+  </div>
+
+  <div class="footer" id="footer">
+    <span class="stat" id="statPlaced">Placed: 0</span>
+    <span class="stat" id="statAbsent">Absent (not placed): 0</span>
+    <span class="stat" id="statPicked">Picked today: 0</span>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal" id="editModal">
+  <div class="sheet">
+    <h2>✏️ Edit Question & Choices</h2>
+    <div class="row">
+      <label style="min-width:140px">Question</label>
+      <input id="qInput" placeholder="Type your daily question" />
+    </div>
+    <div style="height:8px"></div>
+    <div class="row">
+      <label style="min-width:140px">Number of choices</label>
+      <select id="choiceCount">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4" selected>4</option>
+      </select>
+      <label><input type="checkbox" id="openMode"/> "Open" option (I'm ready to explain!)</label>
+    </div>
+    <div style="height:8px"></div>
+    <label>Choices (one per line; emojis allowed)</label>
+    <textarea id="choicesInput">🍞 Toast
+🥣 Cereal
+🍳 Eggs
+🍎 Fruit</textarea>
+    <div style="height:10px"></div>
+    <div class="row">
+      <button id="applyEdit">Apply</button>
+      <button id="closeEdit">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Roster Modal -->
+<div class="modal" id="rosterModal">
+  <div class="sheet">
+    <h2>👥 Edit roster</h2>
+    <p>Enter one student per line.</p>
+    <textarea id="rosterInput">Mr. Cushman
+Abdallah
+Robyn
+Layla
+Keerthy
+Hakim
+Melania
+Halo
+Abbas
+Penelope
+Harnoor
+Sean
+Su
+Caleb
+Elena
+Selena
+Anisha
+Iris
+Jazmine
+Alayna
+Shreyansh</textarea>
+    <div style="height:10px"></div>
+    <div class="row">
+      <button id="applyRoster">Apply roster</button>
+      <button id="closeRoster">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Winner overlay -->
+<div class="modal" id="winnerModal"><div class="sheet" style="text-align:center">
+  <h2 id="winnerText" style="font-size:clamp(28px,4.8vw,60px); margin:0 0 8px"></h2>
+  <div id="winnerSub" style="font-size:clamp(18px,2.4vw,30px); opacity:.9"></div>
+  <div style="height:14px"></div>
+  <button id="closeWinner">OK</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $ = s=>document.querySelector(s);
+  const $$ = s=>Array.from(document.querySelectorAll(s));
+
+  const app = $('#app');
+  const zonesEl = $('#zones');
+  const parking = $('#parking');
+  const questionEl = $('#question');
+  const toast = $('#toast');
+
+  let roster = [];
+  let badges = [];
+  let drag = null;
+  let pickedSet = new Set(); // to avoid repeats until everyone picked
+
+  const zoneClasses = ["blue","red","green","purple"];
+  const moodPreset = Object.freeze({
+    q: 'What Zone are you in??',
+    choices: [ '😢 Blue Zone', '😡 Red Zone', '😊 Yellow Zone', '🙂 Green Zone' ],
+    colors:  [ 'blue',        'red',         'yellow',          'green' ]
+  });
+
+  // --- Utilities ---
+  function showToast(msg){ toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); }
+  function rect(el){ return el.getBoundingClientRect(); }
+  function center(el){ const r=rect(el); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
+  function within(p, el){ const r=rect(el); return p.x>=r.left && p.x<=r.right && p.y>=r.top && p.y<=r.bottom; }
+  function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+  function load(key, fallback){ try{ const v=JSON.parse(localStorage.getItem(key)); return v??fallback; }catch{ return fallback; } }
+
+  // --- Builder functions ---
+  function buildZones(choices, colors){
+    zonesEl.innerHTML = '';
+    const n = choices.length;
+    for(let i=0;i<n;i++){
+      const z = document.createElement('div');
+      z.className = 'zone ' + (colors?.[i] || zoneClasses[i%zoneClasses.length]);
+      z.dataset.zone = i;
+      const h = document.createElement('h3');
+      h.textContent = choices[i];
+      z.appendChild(h);
+      zonesEl.appendChild(z);
+    }
+  }
+
+  function applyChoices(){
+    const lines = $('#choicesInput').value.split(/
++/).map(s=>s.trim()).filter(Boolean);
+    const countSel = parseInt($('#choiceCount').value, 10) || 4;
+    const open = $('#openMode').checked;
+
+    let choices = lines.slice(0, countSel);
+    if(open){ choices.push('🗣️ I\'ve got my answer and I\'m ready to explain!'); }
+
+    const colors = choices.map((_,i)=> (i<4? ['blue','red','green','purple'][i] : ['yellow','blue','red','green'][i%4]));
+    buildZones(choices, colors);
+
+    questionEl.textContent = $('#qInput').value.trim() || 'Question of the Day';
+    save('mxq_choices_v3', {q:questionEl.textContent, choices, colors});
+    relabelBadges();
+    updateStats();
+  }
+
+  function openEdit(){
+    const saved = load('mxq_choices_v3');
+    if(saved){
+      $('#qInput').value = saved.q;
+      $('#choicesInput').value = saved.choices.join('
+');
+      $('#choiceCount').value = Math.min(4, Math.max(1, saved.choices.filter(c=>!c.includes('ready to explain')).length));
+      $('#openMode').checked = saved.choices.some(c=>/ready to explain/i.test(c));
+    } else {
+      $('#qInput').value = questionEl.textContent;
+      $('#choicesInput').value = $$('.zone h3').map(h=>h.textContent.trim()).join('
+');
+      $('#choiceCount').value = Math.min(4, $$('.zone').length);
+      $('#openMode').checked = false;
+    }
+    $('#editModal').classList.add('show');
+  }
+
+  // --- Roster ---
+  function applyRoster(){
+    roster = $('#rosterInput').value.split(/
++/).map(s=>s.trim()).filter(Boolean);
+    save('mxq_roster', roster);
+    makeBadges();
+    pickedSet.clear(); updatePickedStat();
+    showToast('Roster applied');
+  }
+
+  function makeBadges(){
+    badges.forEach(b=>b.remove()); badges = [];
+    const base = rect(parking); const appRect = rect(app);
+    roster.forEach((name, idx)=>{
+      const el = document.createElement('div'); el.className = 'badge';
+      el.appendChild(document.createTextNode(name));
+      app.appendChild(el);
+      const x = base.left - appRect.left + 12 + (idx%6)*150; // more columns across parking
+      const y = (base.top - appRect.top) + 46 + Math.floor(idx/6)*60;
+      el.style.left = x+'px'; el.style.top = y+'px'; el.dataset.zone = 'parking';
+      enableDrag(el); badges.push(el);
+    });
+    updateStats();
+  }
+
+  function relabelBadges(){
+    const zEls = $$('.zone');
+    badges.forEach(b=>{ const c=center(b); let inAny=false; for(const z of zEls){ if(within(c,z)){ b.dataset.zone=z.dataset.zone; inAny=true; break; } } if(!inAny) b.dataset.zone='parking'; });
+  }
+
+  function updateStats(){
+    const placed = badges.filter(b=>b.dataset.zone!=='parking');
+    const absent = badges.length - placed.length;
+    $('#statPlaced').textContent = 'Placed: '+placed.length;
+    $('#statAbsent').textContent = 'Absent (not placed): '+absent;
+    badges.forEach(b=>{ b.dataset.absent = (b.dataset.zone==='parking'); });
+  }
+  function updatePickedStat(){ $('#statPicked').textContent = 'Picked today: '+pickedSet.size; }
+
+  function enableDrag(el){
+    el.addEventListener('pointerdown', (e)=>{ el.setPointerCapture(e.pointerId); const r=el.getBoundingClientRect(); drag={el,dx:e.clientX-r.left,dy:e.clientY-r.top}; });
+    el.addEventListener('pointermove', (e)=>{ if(!drag||drag.el!==el) return; const appR=rect(app); const x=e.clientX-appR.left-drag.dx; const y=e.clientY-appR.top-drag.dy; el.style.left=x+"px"; el.style.top=y+"px"; });
+    el.addEventListener('pointerup', ()=>{ if(!drag||drag.el!==el) return; settle(el); drag=null; });
+  }
+
+  function settle(el){
+    const pt = center(el); const zEls = $$('.zone'); let zoned='parking';
+    for(const z of zEls){ if(within(pt,z)){ zoned=z.dataset.zone; break; } }
+    el.dataset.zone = zoned; updateStats();
+  }
+
+  function resetPositions(){
+    const base = rect(parking); const appR = rect(app);
+    badges.forEach((el, idx)=>{ const x=base.left-appR.left+12+(idx%6)*150; const y=(base.top-appR.top)+46+Math.floor(idx/6)*60; el.style.left=x+'px'; el.style.top=y+'px'; el.dataset.zone='parking'; });
+    pickedSet.clear(); updatePickedStat();
+    updateStats();
+  }
+
+  // --- Randomizer with longer spin, no repeats until all picked ---
+  function randomPick(){
+    let pool = badges.filter(b=>b.dataset.zone!=='parking' && !pickedSet.has(b.textContent.trim()));
+    if(pool.length===0){
+      // if everyone has been picked, reset the cycle but keep placed filter
+      pickedSet.clear(); updatePickedStat();
+      pool = badges.filter(b=>b.dataset.zone!=='parking');
+      if(pool.length===0){ showToast('No placed names yet.'); return; }
+      showToast('Everyone was picked! Starting a new round.');
+    }
+
+    pool.forEach(b=>b.classList.remove('spinning','winner'));
+    const roundsBase = Math.max(24, 6 + pool.length*2);
+    const rounds = Math.floor(roundsBase * 1.5); // 1.5× longer
+    const baseDelay=40; let i=0;
+
+    function tick(){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(), g=ctx.createGain(); o.type='square'; o.frequency.value=800+Math.random()*200; g.gain.setValueAtTime(0.08, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.08); o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.09); setTimeout(()=>ctx.close(),120);}catch(e){} }
+    function win(){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(), g=ctx.createGain(); o.type='triangle'; o.frequency.value=620; g.gain.setValueAtTime(0.001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.5); o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.55); setTimeout(()=>ctx.close(),600);}catch(e){} }
+
+    function step(){
+      pool.forEach(b=>b.classList.remove('spinning'));
+      const idx=i%pool.length; pool[idx].classList.add('spinning'); tick(); i++;
+      const p=i/rounds; const d=baseDelay + p*p*260; // ease-out
+      if(i<rounds){ setTimeout(step,d); }
+      else {
+        pool.forEach(b=>b.classList.remove('spinning','winner'));
+        const winner=pool[(i-1)%pool.length]; winner.classList.add('winner'); win();
+        const z=winner.dataset.zone; let answer=''; const zEl=document.querySelector(`.zone[data-zone="${z}"] h3`); if(zEl) answer=zEl.textContent.trim();
+        const name=winner.textContent.trim(); pickedSet.add(name); updatePickedStat();
+        $('#winnerText').textContent = name;
+        $('#winnerSub').textContent = (answer? `${name}, please explain your answer: ${answer} 🙂` : `${name}, please explain your answer 🙂`);
+        $('#winnerModal').classList.add('show');
+      }
+    }
+    step();
+  }
+
+  function saveLayout(){ const layout=badges.map(b=>({ name:b.textContent.trim(), left:b.style.left, top:b.style.top, zone:b.dataset.zone })); save('mxq_layout', layout); showToast('Layout saved'); }
+  function loadLayout(){ const layout=load('mxq_layout'); if(!layout){ showToast('No saved layout found'); return; } const map=new Map(layout.map(x=>[x.name,x])); badges.forEach(b=>{ const rec=map.get(b.textContent.trim()); if(rec){ b.style.left=rec.left; b.style.top=rec.top; b.dataset.zone=rec.zone; } }); updateStats(); showToast('Layout loaded'); }
+
+  // --- Offline "AI" question generator (curated Grade 2 templates)
+  // Generates sensible prompts + suggested answer stems that align with current choices.
+  function generateQuestion(count, keywords){
+    const kw = (keywords||'').trim().toLowerCase();
+    const theme = matchTheme(kw);
+
+    const frames = {
+      general: [
+        'Which choice fits you best today? Explain your thinking with "because".',
+        'What do you notice and what do you wonder? Pick a choice and tell why.',
+        'Which choice would help our class the most today? Explain your reason.',
+        'Pick a choice and tell a story or example that shows your thinking.'
+      ],
+      friendship: [
+        'Which choice shows being a good friend? Explain how it helps others.',
+        'Pick a choice and tell how it could make someone feel included.'
+      ],
+      patterns: [
+        'Which choice shows a pattern you can describe? Explain the pattern.',
+        'Pick a choice and compare it to another—how are they the same and different?'
+      ],
+      weather: [
+        'Which choice matches today\'s weather? Explain with clues you can see or feel.',
+        'Pick a choice and predict what might happen next because of the weather.'
+      ],
+      community: [
+        'Which choice helps our classroom community? Explain your reasoning.',
+        'Pick a choice and tell how it shows respect or responsibility.'
+      ],
+      growth: [
+        'Which choice helps you grow your brain today? Explain how it challenges you.',
+        'Pick a choice and tell what strategy you will use and why.'
+      ],
+      fairness: [
+        'Which choice is the fairest for everyone? Explain your thinking.',
+        'Pick a choice and tell who it helps and why that matters.'
+      ],
+      animals: [
+        'Which choice would an animal choose and why? Use facts about animals to explain.',
+        'Pick a choice and compare how two animals might use it differently.'
+      ],
+      gratitude: [
+        'Which choice makes you feel thankful? Explain what and why.',
+        'Pick a choice and tell how you could show gratitude today.'
+      ]
+    };
+
+    const bank = frames[theme] || frames.general;
+    const stem = bank[Math.floor(Math.random()*bank.length)];
+    const countHint = (count===1? 'There is one choice today.' : `There are ${count} choices today.`);
+    return `${countHint} ${capitalize(stem)}`;
+  }
+
+  function matchTheme(kw){
+    if(!kw) return 'general';
+    if(/friend|kind|include/.test(kw)) return 'friendship';
+    if(/pattern|sort|group/.test(kw)) return 'patterns';
+    if(/weather|rain|snow|sun|season/.test(kw)) return 'weather';
+    if(/community|class|respect|responsib/.test(kw)) return 'community';
+    if(/grow|challenge|strategy|brain/.test(kw)) return 'growth';
+    if(/fair|equity|equal/.test(kw)) return 'fairness';
+    if(/animal|pet|wild|zoo|habitat/.test(kw)) return 'animals';
+    if(/grateful|thank|gratitude/.test(kw)) return 'gratitude';
+    return 'general';
+  }
+  function capitalize(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+  function suggestedAnswerStems(){
+    // Create an answer hint per zone label to scaffold Grade 2 talk
+    const labels = $$('.zone h3').map(h=>h.textContent.trim());
+    return labels.map(lbl=>{
+      const start = ["I choose","My pick is","I would go with","I think"];
+      const because = ["because it helps…","because I notice…","because it makes me feel…","because it is safer/smarter…","because it matches today…"];
+      return `${start[Math.floor(Math.random()*start.length)]} ${lbl} ${because[Math.floor(Math.random()*because.length)]}`;
+    });
+  }
+
+  // --- Presets ---
+  function setMoodPreset(){
+    questionEl.textContent = moodPreset.q;
+    buildZones(moodPreset.choices, moodPreset.colors);
+    save('mxq_choices_v3', {q:moodPreset.q, choices:moodPreset.choices, colors:moodPreset.colors});
+    relabelBadges(); updateStats();
+  }
+
+  // --- Wire UI ---
+  $('#editBtn').onclick = openEdit;
+  $('#applyEdit').onclick = ()=>{ applyChoices(); $('#editModal').classList.remove('show'); };
+  $('#closeEdit').onclick = ()=>$('#editModal').classList.remove('show');
+
+  $('#presetMood').onclick = setMoodPreset;
+
+  $('#genBtn').onclick = ()=>{
+    const saved = load('mxq_choices_v3');
+    const count = saved? saved.choices.length : $$('.zone').length;
+    const q = generateQuestion(count, $('#keywordInput').value);
+    questionEl.textContent = q;
+    // Optionally show teacher hint with sample stems in toast
+    const stems = suggestedAnswerStems();
+    showToast('Sample stems ready (hover teacher notes)');
+    save('mxq_choices_v3', { q, choices: (saved? saved.choices: $$('.zone h3').map(h=>h.textContent.trim())), colors: (saved? saved.colors: $$('.zone').map(z=>Array.from(z.classList).find(c=>['blue','red','green','purple','yellow'].includes(c))||'blue')) });
+  };
+
+  $('#randomBtn').onclick = randomPick;
+  $('#resetBtn').onclick = resetPositions;
+  $('#saveBtn').onclick = saveLayout;
+  $('#loadBtn').onclick = loadLayout;
+  $('#closeWinner').onclick = ()=>$('#winnerModal').classList.remove('show');
+
+  // --- Init ---
+  const savedQ = load('mxq_choices_v3');
+  if(savedQ){ questionEl.textContent=savedQ.q; buildZones(savedQ.choices, savedQ.colors); }
+  const savedRoster = load('mxq_roster');
+  if(savedRoster){ roster = savedRoster; } else { roster = $('#rosterInput').value.split(/
++/).map(s=>s.trim()).filter(Boolean); }
+  makeBadges();
+  updateStats();
+})();
+</script>
+</body>
+</html>

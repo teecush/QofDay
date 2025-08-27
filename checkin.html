@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MX Daily Check-In — Gemini Default</title>
+<style>
+  body{margin:0;font-family:sans-serif;background:#0a0f1e;color:#f8fafc}
+  .question{font-size:1.6em;font-weight:bold;padding:1em;background:#1e293b;border-bottom:2px solid #334155}
+  .zones{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:12px}
+  .zone{padding:1em;border-radius:12px;border:2px dashed #94a3b8;background:#0f172a;min-height:120px}
+  .parking{padding:12px;background:#111827;border-top:2px solid #334155;min-height:150px}
+  .badge{display:inline-block;padding:6px 12px;margin:6px;border-radius:999px;font-weight:bold;
+    background:#e2e8f0;color:#111827;cursor:grab;user-select:none}
+  .teacher{background:#fde68a}
+  button{margin:6px;padding:8px 12px;border-radius:8px;border:none;font-weight:bold;cursor:pointer}
+  #winner{font-size:1.8em;font-weight:bold;padding:1em;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="question" id="question">Loading question…</div>
+
+<div class="zones" id="zones"></div>
+
+<div class="parking">
+  <h3>🅿️ Parking Lot</h3>
+  <div id="parkingPad"></div>
+</div>
+
+<div style="padding:12px">
+  <input id="keywordInput" placeholder="Keywords (e.g. friendship, weather)" style="padding:6px;width:60%" />
+  <button id="genBtn">✨ Generate with Gemini</button>
+  <button id="pickBtn">🎡 Pick Random Student</button>
+</div>
+
+<div id="winner"></div>
+
+<script>
+// --- CONFIG ---
+// Put your Gemini API key here (from Google AI Studio)
+const GEMINI_KEY = "AIza...";  // <--- REPLACE with your key
+const MODEL = "gemini-1.5-flash";
+
+// --- ROSTER ---
+const roster = [
+  "Abdallah","Robyn","Layla","Keerthy","Hakim","Melania","Halo","Abbas","Penelope",
+  "Harnoor","Sean","Su","Caleb","Elena","Selena","Anisha","Iris","Jazmine","Alayna","Shreyansh"
+];
+const TEACHER = "Mr. Cushman";
+
+// --- UI Setup ---
+const zonesEl = document.getElementById("zones");
+const qEl = document.getElementById("question");
+const winnerEl = document.getElementById("winner");
+
+function makeZones(choices){
+  zonesEl.innerHTML = "";
+  zonesEl.style.gridTemplateColumns = `repeat(${choices.length}, 1fr)`;
+  choices.forEach((c,i)=>{
+    const div=document.createElement("div");
+    div.className="zone";
+    div.dataset.zone=i;
+    div.innerHTML="<strong>"+c+"</strong><div></div>";
+    zonesEl.appendChild(div);
+  });
+}
+function makeBadges(){
+  const parking=document.getElementById("parkingPad");
+  parking.innerHTML="";
+  roster.concat([TEACHER]).forEach(name=>{
+    const b=document.createElement("div");
+    b.className="badge"+(name===TEACHER?" teacher":"");
+    b.textContent=name;
+    b.draggable=true;
+    b.addEventListener("dragstart",e=>{
+      e.dataTransfer.setData("text/plain", name);
+      e.dataTransfer.dropEffect="move";
+      dragged=b;
+    });
+    parking.appendChild(b);
+  });
+}
+let dragged=null;
+document.addEventListener("dragover",e=>{e.preventDefault();});
+document.addEventListener("drop",e=>{
+  e.preventDefault();
+  const target=e.target.closest(".zone, .parking");
+  if(!target) return;
+  target.querySelector("div")?.appendChild(dragged);
+});
+
+// --- AI Generation (Gemini direct) ---
+async function generateQnA(count=4, kw=""){
+  const prompt=`Create one grade 2 daily question with ${count} multiple choice answers.
+Return only JSON like {"question":"...","choices":["..."]}.
+Keywords: ${kw||"none"}. Ensure answers match the question.`;
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_KEY}`;
+  const res=await fetch(url,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}]})
+  });
+  const data=await res.json();
+  const txt=(data.candidates?.[0]?.content?.parts?.[0]?.text)||"";
+  try{
+    return JSON.parse(txt.match(/\{[\s\S]*\}/)[0]);
+  }catch(e){
+    return {question:"Which choice fits you best today?",choices:["Option A","Option B","Option C","Option D"]};
+  }
+}
+
+// --- Randomizer ---
+function pickRandom(){
+  const placed=[...document.querySelectorAll(".zone .badge")].filter(b=>b.textContent!==TEACHER);
+  if(placed.length===0){ winnerEl.textContent="No student placed yet."; return; }
+  const w=placed[Math.floor(Math.random()*placed.length)];
+  winnerEl.textContent=`🎉 ${w.textContent}, please explain your answer!`;
+}
+
+// --- Events ---
+document.getElementById("genBtn").onclick=async()=>{
+  const kw=document.getElementById("keywordInput").value;
+  const qna=await generateQnA(4, kw);
+  qEl.textContent=qna.question;
+  makeZones(qna.choices);
+};
+document.getElementById("pickBtn").onclick=pickRandom;
+
+// --- Boot ---
+(async()=>{
+  makeBadges();
+  const qna=await generateQnA();
+  qEl.textContent=qna.question;
+  makeZones(qna.choices);
+})();
+</script>
+</body>
+</html>

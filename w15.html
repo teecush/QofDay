@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MX Daily Check-In — Gemini Default (Ontario-aligned)</title>
+<style>
+  :root{
+    --bg:#0a0f1e; --panel:#0f172a; --ink:#e8eef7; --muted:#94a3b8; --stroke:#1e293b;
+    --brand1:#22d3ee; --brand2:#a78bfa; --ok:#34d399; --warn:#fbbf24;
+    --p-blue:#e8f3ff;   --p-blue-b:#93c5fd;
+    --p-red:#ffe7ea;    --p-red-b:#fda4af;
+    --p-green:#ecfff4;  --p-green-b:#86efac;
+    --p-purple:#f3e8ff; --p-purple-b:#c4b5fd;
+    --p-yellow:#fff7cc; --p-yellow-b:#fde68a;
+  }
+  html,body{height:100%;margin:0;background:radial-gradient(1200px 900px at 10% 0%, #0d1634, #0a0f1e 60%);color:var(--ink);font-family:Inter, ui-sans-serif, system-ui, Segoe UI, Roboto, Arial, sans-serif}
+  * { user-select:none; -webkit-user-select:none; -ms-user-select:none; }
+  input, textarea, select, button { user-select:text; -webkit-user-select:text; -ms-user-select:text; }
+
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:12px;height:100%;padding:16px;box-sizing:border-box}
+
+  .header{display:grid; grid-template-columns:1fr auto; gap:12px; align-items:stretch}
+  #randomBtn{
+    background:radial-gradient(120% 120% at 10% 0%, var(--brand2), var(--brand1));
+    color:#06121a; font-weight:900; font-size:clamp(16px,2.2vw,24px);
+    border:none; border-radius:18px; padding:16px 18px; cursor:pointer;
+    box-shadow:0 14px 30px rgba(67,97,238,.35);
+    transition:transform .12s ease, box-shadow .2s ease;
+  }
+  #randomBtn:hover{ box-shadow:0 18px 36px rgba(67,97,238,.45), 0 0 24px 4px rgba(167,139,250,.25) }
+  #randomBtn:active{ transform:translateY(1px) scale(.98); box-shadow:0 10px 20px rgba(67,97,238,.35)}
+  .question{display:flex; align-items:center; font-size:clamp(22px,4vw,48px); font-weight:900; letter-spacing:.2px; padding:10px 12px; background:rgba(15,23,42,.6); border:1px solid var(--stroke); border-radius:16px}
+
+  .stage{position:relative; display:grid; grid-template-rows:auto auto; gap:12px; min-height:0}
+  #badgeLayer{position:absolute; inset:0; z-index:20}
+
+  .zones{display:grid; gap:12px; grid-auto-rows:minmax(220px,1fr)}
+  .zone{position:relative;border-radius:20px;border:2px dashed #94a3b8;padding:12px;box-shadow:0 12px 36px rgba(0,0,0,.18) inset}
+  .zone h3{margin:0 0 8px 0;font-size:clamp(16px,2.1vw,26px);font-weight:900;color:#0b1020;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+  .blue{background:var(--p-blue); border-color:var(--p-blue-b)}
+  .red{background:var(--p-red); border-color:var(--p-red-b)}
+  .green{background:var(--p-green); border-color:var(--p-green-b)}
+  .purple{background:var(--p-purple); border-color:var(--p-purple-b)}
+  .yellow{background:var(--p-yellow); border-color:var(--p-yellow-b)}
+
+  .parking{background:#0b1226;border-radius:18px;border:1px solid var(--stroke);padding:12px;min-height:320px}
+  .parking h3{margin:0 0 8px;font-size:18px;font-weight:800;color:#cbd5e1}
+  #parkingPad{position:relative;min-height:380px; border:1px dashed #334155; border-radius:12px}
+
+  .badge{position:absolute;touch-action:none;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-weight:800;font-size:clamp(14px,1.8vw,20px);color:#0b1226;background:linear-gradient(180deg,#f8fafc,#e2e8f0);box-shadow:0 10px 22px rgba(0,0,0,.35);border:2px solid #0f172a;transition:top .25s cubic-bezier(.34,1.56,.64,1), left .25s cubic-bezier(.34,1.56,.64,1)}
+  .badge.teacher{ background:linear-gradient(180deg,#fff7d6,#fde68a); border-color:#b45309 }
+  .badge[data-absent="true"]{background:linear-gradient(180deg,#ffe4e6,#fecaca)}
+  .badge.spinning{outline:4px solid var(--warn)}
+  .badge.winner{outline:6px solid var(--ok)}
+  .badge.pickedHidden{opacity:0; pointer-events:none; transition:opacity .2s}
+
+  .footer{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .footer .stat{background:#0b1226;border:1px solid var(--stroke);border-radius:12px;padding:6px 10px}
+
+  .fab{position:fixed; right:16px; bottom:16px; display:flex; gap:12px; z-index:120}
+  .fab button{
+    background:#0b1226; border:1px solid var(--stroke); color:var(--ink);
+    padding:14px 18px; border-radius:18px; font-weight:900; font-size:16px; cursor:pointer;
+    box-shadow:0 12px 24px rgba(0,0,0,.45); transition:.12s transform,.12s box-shadow
+  }
+  .fab button:active{ transform:translateY(1px) scale(.98); box-shadow:0 8px 16px rgba(0,0,0,.35) }
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+  .modal.show{display:flex}
+  .sheet{width:min(1100px,95vw);max-height:90vh;overflow:auto;background:#0b1226;border:1px solid var(--stroke);border-radius:18px;padding:18px;box-shadow:0 22px 64px rgba(0,0,0,.5)}
+  .sheet h2{margin:0 0 10px}
+  .sheet section{border:1px solid #1f2937;border-radius:14px;padding:12px;margin:10px 0;background:#0c1428}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .sheet input,.sheet select,.sheet textarea, .sheet button{
+    font-size:16px;border-radius:12px;border:1px solid #334155;background:#0b1226;color:var(--ink);padding:10px 12px;transition:.12s transform,.12s box-shadow
+  }
+  .sheet button{box-shadow:0 8px 18px rgba(0,0,0,.35)}
+  .sheet button:active{transform:translateY(1px) scale(.98); box-shadow:0 6px 12px rgba(0,0,0,.35)}
+  .answers-grid{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .answers-grid .a{display:flex;gap:8px;align-items:center}
+  .answers-grid .lbl{width:110px; font-weight:800; text-align:right; opacity:.9}
+  .answers-grid input{flex:1}
+  .tip{font-size:12px;color:#94a3b8}
+
+  .toast{position:fixed;bottom:16px;left:16px;background:#0b1226;color:var(--ink);border:1px solid var(--stroke);border-radius:12px;padding:10px 14px;opacity:0;transform:translateY(8px);transition:.25s;z-index:120}
+  .toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="header">
+    <div class="question" id="question">Loading question…</div>
+    <button id="randomBtn">🎡 Pick Random Student</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="zones" id="zones"></div>
+    <div class="parking" id="parking">
+      <h3>🅿️ Parking Lot / Absent</h3>
+      <div id="parkingPad"></div>
+    </div>
+    <div id="badgeLayer"></div>
+  </div>
+
+  <div class="footer" id="footer">
+    <span class="stat" id="statPlaced">Placed: 0</span>
+    <span class="stat" id="statAbsent">Absent (not placed): 0</span>
+  </div>
+</div>
+
+<!-- Bottom-right actions -->
+<div class="fab">
+  <button id="openSettings">⚙️ Settings</button>
+  <button id="quickReset">Reset</button>
+</div>
+
+<!-- SETTINGS -->
+<div class="modal" id="settingsModal"><div class="sheet">
+  <h2>⚙️ Settings</h2>
+  <section>
+    <div class="row" style="gap:12px">
+      <label style="min-width:120px;font-weight:800">Question</label>
+      <input id="qInput" placeholder="Daily question (or generate with AI)" style="flex:1" />
+    </div>
+
+    <div class="row" style="gap:12px">
+      <label style="min-width:120px;font-weight:800">Keywords</label>
+      <input id="keywordInput" placeholder="e.g., friendship, patterns, weather, habitats" style="flex:1" />
+      <label style="min-width:90px;font-weight:800">Grade</label>
+      <select id="gradeInput">
+        <option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option>
+      </select>
+      <label style="min-width:90px;font-weight:800">Subject</label>
+      <select id="subjectInput">
+        <option selected>General</option>
+        <option>Math</option>
+        <option>Language</option>
+        <option>Science</option>
+        <option>Social Studies</option>
+        <option>Drama</option>
+        <option>Dance</option>
+        <option>Visual Arts</option>
+        <option>Music</option>
+        <option>Phys-Ed</option>
+      </select>
+      <button id="presetMood">🟦🟥🟨🟩 Mood Checker</button>
+    </div>
+
+    <div class="row" style="gap:12px">
+      <label style="min-width:120px;font-weight:800">Options</label>
+      <select id="choiceCount">
+        <option value="2">2 choices</option>
+        <option value="3">3 choices</option>
+        <option value="4" selected>4 choices</option>
+        <option value="open">Open (1 bin)</option>
+      </select>
+      <button id="genBtn">✨ Generate with AI</button>
+      <button id="aiBtn">🤖 AI Settings</button>
+    </div>
+    <div class="row"><span id="aiStatusMain" style="font-weight:700;color:#94a3b8">AI: not checked</span></div>
+
+    <div id="answersWrap">
+      <div class="answers-grid">
+        <div class="a"><div class="lbl">Answer A</div><input id="a1" value="Work alone"></div>
+        <div class="a"><div class="lbl">Answer B</div><input id="a2" value="Work with a partner"></div>
+        <div class="a"><div class="lbl">Answer C</div><input id="a3" value="Ask a teacher"></div>
+        <div class="a"><div class="lbl">Answer D</div><input id="a4" value="Try a new strategy"></div>
+      </div>
+      <div class="tip">Tip: Emojis are added automatically if you leave them out. For 3–4 choices the last option will be “📝 Other (explain)”.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="row" style="gap:12px; flex-wrap:wrap">
+      <button id="openRoster">👥 Edit Roster</button>
+      <button id="saveBtn">💾 Save Layout</button>
+      <button id="loadBtn">⭳ Load Layout</button>
+      <button id="allToParkingBtn">🅿️ All to Parking</button>
+      <button id="resetWeekBtn">🗓️ Reset Week</button>
+    </div>
+  </section>
+
+  <div class="row" style="justify-content:flex-end;margin-top:8px">
+    <button id="applySettings" style="font-weight:900;padding:12px 18px">✅ OK</button>
+    <button id="closeSettings" style="padding:12px 18px">Close</button>
+  </div>
+</div></div>
+
+<!-- Roster Modal -->
+<div class="modal" id="rosterModal">
+  <div class="sheet">
+    <h2>👥 Edit roster (students only)</h2>
+    <textarea id="rosterInput" style="width:100%;min-height:260px">Abdallah
+Robyn
+Layla
+Keerthy
+Hakim
+Melania
+Halo
+Abbas
+Penelope
+Harnoor
+Sean
+Su
+Caleb
+Elena
+Selena
+Anisha
+Iris
+Jazmine
+Alayna
+Shreyansh</textarea>
+    <div class="row">
+      <button id="applyRoster">Apply roster</button>
+      <button id="closeRoster">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Config Modal -->
+<div class="modal" id="aiModal"><div class="sheet">
+  <h2>🤖 AI Question Generator (Gemini)</h2>
+  <p>Paste your Google AI Studio key (saved locally in your browser).</p>
+  <div class="row">
+    <label style="min-width:140px">API Key</label>
+    <input id="aiKey" placeholder="AIza..." style="flex:1" />
+  </div>
+  <div class="row">
+    <label style="min-width:140px">Model</label>
+    <input id="aiModel" placeholder="gemini-1.5-flash" style="flex:1" />
+  </div>
+  <div class="row">
+    <span id="aiStatusDetail" style="flex:1;font-weight:700;color:#94a3b8">Status: not checked</span>
+    <button id="aiTest">Test Connection</button>
+  </div>
+  <div style="height:10px"></div>
+  <button id="aiSave">Save</button>
+  <button id="aiClose">Close</button>
+</div></div>
+
+<!-- Winner overlay -->
+<div class="modal" id="winnerModal"><div class="sheet" style="text-align:center">
+  <h2 id="winnerText" style="font-size:clamp(28px,4.8vw,60px); margin:0 0 8px"></h2>
+  <div id="winnerSub" style="font-size:clamp(18px,2.4vw,30px); opacity:.9"></div>
+  <button id="closeWinner">OK</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  /* ====================== CONFIG (Gemini default) ====================== */
+  // Optional: hardcode your key here; otherwise paste once in AI Settings.
+  const GEMINI_KEY_DEFAULT = ""; // e.g., "AIza..."; leave "" to use the modal
+  const GEMINI_MODEL_DEFAULT = "gemini-1.5-flash";
+
+  /* ====================== UTILITIES ====================== */
+  const $  = s=>document.querySelector(s);
+  const $$ = s=>Array.from(document.querySelectorAll(s));
+  function showToast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 1700); }
+  function rect(el){ return el.getBoundingClientRect(); }
+  function center(el){ const r=rect(el); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
+  function within(p, el){ const r=rect(el); return p.x>=r.left && p.x<=r.right && p.y>=r.top && p.y<=r.bottom; }
+  function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+  function load(k,f){ try{ const v=JSON.parse(localStorage.getItem(k)); return v??f; }catch{return f;} }
+  function stageOffset(){ const r=rect($('#stage')); return {x:r.left, y:r.top}; }
+
+  function addEmojiToChoice(choice){
+    const s = (choice||'').trim();
+    if (/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(s)) return choice;
+    const lower = s.toLowerCase();
+    const map = [
+      [/apple|fruit/, "🍎"], [/banana/, "🍌"], [/bread|toast/, "🍞"], [/cereal|granola|oat/, "🥣"], [/egg/, "🍳"], [/milk/, "🥛"],
+      [/friend|kind|include/, "🤝"], [/play/, "🎲"], [/book|read/, "📖"], [/pattern|sequence/, "🔄"], [/color|colour/, "🎨"],
+      [/rain|umbrella/, "☔"], [/snow/, "❄️"], [/sun|hot|sunny/, "☀️"], [/coat|jacket/, "🧥"], [/team|partner|group/, "👫"],
+      [/move|exercise|run|sport/, "🏃"], [/music|sing|song/, "🎵"], [/paint|draw|art/, "🎨"], [/drama|act|role/, "🎭"]
+    ];
+    for(const [re,emo] of map){ if(re.test(lower)) return emo+" "+choice; }
+    return "🎯 "+choice;
+  }
+
+  function weekKey(d=new Date()){
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = date.getUTCDay()||7;
+    date.setUTCDate(date.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+    const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+    return date.getUTCFullYear() + '-W' + String(weekNo).padStart(2,'0');
+  }
+
+  /* ====================== STATE ====================== */
+  const TEACHER_NAME = "Mr. Cushman";
+  const OPEN_LABEL = "🗣️ I’ve got my answer and I’m ready to explain why.";
+  const moodPreset = Object.freeze({
+    q: 'What Zone are you in??',
+    choices: [ '😢 Blue Zone', '😡 Red Zone', '😊 Yellow Zone', '🙂 Green Zone' ],
+    colors:  [ 'blue', 'red', 'yellow', 'green' ]
+  });
+  let roster = [];
+  let badges = [];
+  let drag = null;
+  let pickedSet = new Set();
+
+  /* ====================== ZONES & QUESTION ====================== */
+  const zonesEl = $('#zones'), questionEl = $('#question'), badgeLayer = $('#badgeLayer');
+  function setGridColumns(n){ zonesEl.style.gridTemplateColumns = `repeat(${n}, minmax(0, 1fr))`; }
+  function buildZones(choices, colors){
+    zonesEl.innerHTML = '';
+    setGridColumns(choices.length);
+    for(let i=0;i<choices.length;i++){
+      const z = document.createElement('div');
+      z.className = 'zone ' + (colors?.[i] || ['blue','red','green','purple'][i%4]);
+      z.dataset.zone = i;
+      const h = document.createElement('h3'); h.textContent = choices[i];
+      z.appendChild(h); zonesEl.appendChild(z);
+    }
+  }
+  function relabelBadges(){
+    const zEls = $$('.zone');
+    badges.forEach(b=>{
+      const c=center(b); let inAny=false;
+      for(const z of zEls){ if(within(c,z)){ b.dataset.zone=z.dataset.zone; inAny=true; break; } }
+      if(!inAny) b.dataset.zone='parking';
+      b.dataset.lastX = b.style.left; b.dataset.lastY = b.style.top;
+    });
+  }
+  function applyChoicesFrom(mode, lines){
+    let choices = [];
+    if(mode === 'open'){
+      choices = [OPEN_LABEL];
+    } else {
+      const count = Math.max(2, Math.min(4, parseInt(mode,10) || 4));
+      choices = lines.slice(0, count).map(addEmojiToChoice);
+      if(count>=3){ // always add Other as final
+        const base = "📝 Other (explain)";
+        if(!choices.some(c=>/other/i.test(c))) choices = choices.slice(0, count-1).concat(base);
+        else {
+          // ensure it's last
+          choices = choices.filter(c=>!/other/i.test(c)).concat(choices.find(c=>/other/i.test(c)));
+        }
+      }
+    }
+    const colors = choices.map((_,i)=> (i<4? ['blue','red','green','purple'][i] : ['yellow','blue','red','green'][i%4]));
+    buildZones(choices, colors);
+    const saved = load('mxq_choices_v10') || {};
+    save('mxq_choices_v10', {q:saved.q || questionEl.textContent, choices, colors, mode});
+    relabelBadges(); updateStats();
+  }
+
+  /* ====================== BADGES / ROSTER ====================== */
+  function applyRoster(){
+    const txt = $('#rosterInput').value;
+    roster = txt.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    save('mxq_roster', roster);
+    makeBadges(true); showToast('Roster applied');
+  }
+
+  function distributeInParking(resetAll=false){
+    // Spread badges across parking width in neat rows
+    const pad = $('#parkingPad');
+    const r = rect(pad), sOff = stageOffset();
+    const left0 = r.left - sOff.x + 16;
+    const top0  = r.top  - sOff.y + 48;
+    const usableW = r.width - 32;
+    const badgeW = 140;  // approximate width per badge
+    const badgeH = 64;   // row height
+    const cols = Math.max(4, Math.floor(usableW / badgeW));
+    let i = 0;
+    badges.forEach(b=>{
+      if(b.dataset.ignore==='true') return; // teacher separately positioned
+      if(!resetAll && b.dataset.zone!=='parking') return;
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = left0 + col*badgeW;
+      const y = top0  + row*badgeH;
+      b.style.left = x+'px'; b.style.top = y+'px';
+      b.dataset.zone='parking';
+      b.dataset.lastX=b.style.left; b.dataset.lastY=b.style.top;
+      i++;
+    });
+    // Teacher in a safe corner
+    const t = badges.find(b=>b.dataset.ignore==='true');
+    if(t){
+      t.style.left = (r.left - sOff.x + 16) + 'px';
+      t.style.top  = (r.top  - sOff.y + 8) + 'px';
+      t.dataset.zone='parking';
+      t.dataset.lastX=t.style.left; t.dataset.lastY=t.style.top;
+    }
+  }
+
+  function makeBadges(resetToParking=false){
+    badgeLayer.innerHTML = '';
+    badges = [];
+    // Teacher
+    const t = document.createElement('div');
+    t.className = 'badge teacher';
+    t.textContent = "Mr. Cushman";
+    t.setAttribute('draggable','false'); t.ondragstart = ()=>false;
+    badgeLayer.appendChild(t);
+    t.dataset.zone = 'parking'; t.dataset.ignore = 'true';
+    enableDrag(t); badges.push(t);
+    // Students
+    roster.forEach((name)=>{
+      const el = document.createElement('div'); el.className = 'badge';
+      el.textContent = name; el.setAttribute('draggable','false'); el.ondragstart = ()=>false;
+      badgeLayer.appendChild(el);
+      el.dataset.zone='parking';
+      enableDrag(el); badges.push(el);
+    });
+    // Spread across width (on boot or when roster changes)
+    distributeInParking(true);
+    updateStats();
+  }
+
+  function updateStats(){
+    const isStudent = b => b.dataset.ignore !== 'true';
+    const placed = badges.filter(b=> isStudent(b) && b.dataset.zone!=='parking' && !b.classList.contains('pickedHidden'));
+    const totalStudents = badges.filter(isStudent).length;
+    const hidden = badges.filter(b=>isStudent(b)&&b.classList.contains('pickedHidden')).length;
+    const absent = totalStudents - placed.length - hidden;
+    $('#statPlaced').textContent = 'Placed: '+placed.length;
+    $('#statAbsent').textContent = 'Absent (not placed): '+absent;
+    badges.forEach(b=>{ b.dataset.absent = (b.dataset.zone==='parking' && isStudent(b) && !b.classList.contains('pickedHidden')); });
+  }
+
+  /* ====================== DRAG / BOUNCE BACK ====================== */
+  function enableDrag(el){
+    el.addEventListener('pointerdown', (e)=>{
+      e.preventDefault(); el.setPointerCapture(e.pointerId);
+      const r=el.getBoundingClientRect();
+      drag={el,dx:e.clientX-r.left,dy:e.clientY-r.top};
+    });
+    el.addEventListener('pointermove', (e)=>{
+      if(!drag||drag.el!==el) return;
+      const sOff=stageOffset();
+      const x=e.clientX-sOff.x-drag.dx; const y=e.clientY-sOff.y-drag.dy;
+      el.style.left=x+"px"; el.style.top=y+"px";
+    });
+    el.addEventListener('pointerup', ()=>{
+      if(!drag||drag.el!==el) return; settle(el); drag=null;
+    });
+  }
+  function settle(el){
+    const pt = center(el);
+    const targets = [...$$('.zone'), $('#parkingPad')];
+    let landed = false;
+    for(const target of targets){
+      if(within(pt, target)){
+        el.dataset.zone = target.dataset.zone || 'parking';
+        el.dataset.lastX = el.style.left;
+        el.dataset.lastY = el.style.top;
+        landed = true; break;
+      }
+    }
+    if(!landed){
+      el.style.left = el.dataset.lastX || el.style.left;
+      el.style.top  = el.dataset.lastY || el.style.top;
+    }
+    updateStats();
+  }
+
+  function allToParking(){
+    distributeInParking(true);
+    updateStats();
+  }
+
+  /* ====================== WEEKLY MEMORY (HIDDEN WINNERS) ====================== */
+  function persistPicked(){ save('mxq_picked', Array.from(pickedSet)); }
+  function ensureWeek(){
+    const cur = weekKey();
+    const stored = load('mxq_week_key');
+    if(stored !== cur){ save('mxq_week_key', cur); save('mxq_picked', []); pickedSet.clear(); }
+    else { pickedSet = new Set(load('mxq_picked', [])); }
+  }
+  function resetWeekOnly(){
+    pickedSet.clear(); persistPicked();
+    badges.forEach(b=> b.classList.remove('pickedHidden'));
+    updateStats();
+    showToast('Weekly picks cleared and hidden names revealed');
+  }
+
+  /* ====================== RANDOMIZER ====================== */
+  function randomPick(){
+    const placed = badges.filter(b=> b.dataset.zone!=='parking' && b.dataset.ignore!=='true' && !b.classList.contains('pickedHidden'));
+    let pool = placed.filter(b=> !pickedSet.has(b.textContent.trim()));
+    if(pool.length===0){
+      pickedSet.clear(); persistPicked();
+      pool = placed.slice();
+      if(pool.length===0){ showToast('No placed names yet.'); return; }
+      showToast('New round this week!');
+    }
+    pool.forEach(b=>b.classList.remove('spinning','winner'));
+    const roundsBase = Math.max(24, 6 + pool.length*2);
+    const rounds = Math.floor(roundsBase * 1.5); // ~1.5× longer
+    const baseDelay=40; let i=0;
+
+    function tick(){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(), g=ctx.createGain(); o.type='square'; o.frequency.value=800+Math.random()*200; g.gain.setValueAtTime(0.08, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.08); o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.09); setTimeout(()=>ctx.close(),120);}catch(e){} }
+    function win(){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(), g=ctx.createGain(); o.type='triangle'; o.frequency.value=620; g.gain.setValueAtTime(0.001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.5); o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.55); setTimeout(()=>ctx.close(),600);}catch(e){} }
+
+    function step(){
+      pool.forEach(b=>b.classList.remove('spinning'));
+      const idx=i%pool.length; pool[idx].classList.add('spinning'); tick(); i++;
+      const p=i/rounds; const d=baseDelay + p*p*260;
+      if(i<rounds){ setTimeout(step,d); }
+      else {
+        pool.forEach(b=>b.classList.remove('spinning','winner'));
+        const winner=pool[(i-1)%pool.length]; winner.classList.add('winner'); win();
+        const z=winner.dataset.zone; let answer=''; const zEl=document.querySelector(`.zone[data-zone="${z}"] h3`); if(zEl) answer=zEl.textContent.trim();
+        const name=winner.textContent.trim(); pickedSet.add(name); persistPicked();
+        setTimeout(()=>{ winner.classList.add('pickedHidden'); updateStats(); }, 120);
+        $('#winnerText').textContent = name;
+        $('#winnerSub').textContent = (answer? `${name}, please explain your answer: ${answer} 🙂` : `${name}, please explain your answer 🙂`);
+        $('#winnerModal').classList.add('show');
+      }
+    }
+    step();
+  }
+
+  /* ====================== AI (Gemini only, Ontario-aligned) ====================== */
+  function getGeminiKey(){ return (load('mxq_ai_key') || GEMINI_KEY_DEFAULT || '').trim(); }
+  function getGeminiModel(){ return (load('mxq_ai_model') || GEMINI_MODEL_DEFAULT || 'gemini-1.5-flash').trim(); }
+
+  function buildOntarioPrompt({count, kw, grade, subject}){
+    const s = subject||'General';
+    const g = grade||'2';
+    const keywords = kw||'none';
+    // Guidance: broad categories, justify, critical thinking, Ontario “big ideas”
+    return `
+You are generating a Grade ${g} classroom check-in for Ontario curriculum contexts.
+Create ONE short, student-friendly, open-style question that encourages explanation and critical thinking.
+- Subject focus: ${s}. If "General", make it broadly cross-curricular (community, learning skills).
+- Keywords/theme: ${keywords}.
+- The question must be ONE sentence and invite "why/how" thinking.
+- Then provide exactly ${count} multiple-choice options that MATCH the question and are BROAD categories, not trivia.
+- If ${count} is 3 or 4, the LAST option MUST be "Other (explain)". Keep it as a general category.
+- Use accessible vocabulary for Grades 1–6; for higher grades, allow slightly deeper verbs (compare, predict, justify).
+- Avoid answer overlap; each option should represent a distinct reasoning pathway (e.g., “Observe”, “Model”, “Test”, not four nearly identical choices).
+- Return ONLY JSON as:
+{"question":"...","choices":["...","...","...","..."]}
+
+Examples of good options:
+- Math: "Estimate", "Draw a model", "Look for a pattern", "📝 Other (explain)"
+- Science: "Observe", "Make a prediction", "Test an idea", "📝 Other (explain)"
+- Language: "Use a detail from the text", "Use your own example", "Ask a question", "📝 Other (explain)"
+- Social Studies: "Consider different viewpoints", "Use a map or timeline", "Connect to our community", "📝 Other (explain)"`
+    .trim();
+  }
+
+  function parseJSONLenient(txt){
+    try{ return JSON.parse(txt); }catch(e){}
+    const m = txt && txt.match(/\{[\s\S]*\}/); if(m){ try{ return JSON.parse(m[0]); }catch(e){} }
+    return null;
+  }
+
+  async function geminiGenerateQnA(count=4, kw="", grade="2", subject="General"){
+    const key = getGeminiKey();
+    if(!key){ throw new Error('No Gemini API key set. Click AI Settings and paste your key.'); }
+    const model = getGeminiModel();
+    const prompt = buildOntarioPrompt({count, kw, grade, subject});
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ contents: [{ role:"user", parts:[{ text: prompt }]}] })
+    });
+    if(!res.ok){
+      const txt = await res.text();
+      throw new Error(`Gemini HTTP ${res.status}: ${txt}`);
+    }
+    const data = await res.json();
+    const text = (data?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join(' ').trim();
+    const obj = parseJSONLenient(text);
+    if(!obj || typeof obj.question!=='string' || !Array.isArray(obj.choices) || obj.choices.length!==count){
+      throw new Error('Bad AI JSON shape');
+    }
+    // Ensure final "Other" for 3–4 choices
+    if(count>=3){
+      const hasOther = obj.choices.some(c=>/other/i.test(c));
+      if(!hasOther){
+        obj.choices = obj.choices.slice(0, count-1).concat('📝 Other (explain)');
+      }else{
+        const other = obj.choices.find(c=>/other/i.test(c));
+        obj.choices = obj.choices.filter(c=>c!==other).concat(other);
+      }
+    }
+    // Add emojis where missing
+    obj.choices = obj.choices.map(addEmojiToChoice);
+    return obj;
+  }
+
+  // Offline banks (Ontario-ish focus, broad categories)
+  function matchTheme(kw){ if(!kw) return 'general';
+    if(/friend|kind|include/.test(kw)) return 'friendship';
+    if(/pattern|sort|group|model/.test(kw)) return 'math';
+    if(/weather|plant|animal|energy|habitat|force/.test(kw)) return 'science';
+    if(/community|map|timeline|heritage|responsib|rights/.test(kw)) return 'social';
+    if(/music|note|rhythm|sing|instrument/.test(kw)) return 'music';
+    if(/art|draw|paint|colour|design|texture/.test(kw)) return 'visual';
+    if(/drama|role|act|scene/.test(kw)) return 'drama';
+    if(/dance|movement|balance/.test(kw)) return 'dance';
+    if(/read|write|text|story|opinion|media/.test(kw)) return 'language';
+    if(/move|run|health|wellness|team/.test(kw)) return 'physed';
+    return 'general';
+  }
+
+  function offlineBank(count, subject, kw){
+    const T = (s)=>s.map(addEmojiToChoice);
+    const banks = {
+      General: {
+        q: ['Which way will help our class learn best today? Explain why.','How could you show your thinking most clearly? Tell why.'],
+        a: [['Estimate','Use a model','Ask a question','📝 Other (explain)']]
+      },
+      Math: {
+        q: ['How would you start this math problem? Explain.','Which strategy fits this problem best? Tell why.'],
+        a: [['Estimate first','Look for a pattern','Draw a model','📝 Other (explain)']]
+      },
+      Language: {
+        q: ['What will help you explain your idea clearly? Why?','How could you support your opinion? Tell why.'],
+        a: [['Use a detail from the text','Use your own example','Ask a clarifying question','📝 Other (explain)']]
+      },
+      Science: {
+        q: ['How could you explore this science idea? Explain.','What is a safe first step to investigate? Tell why.'],
+        a: [['Observe closely','Make a prediction','Test an idea','📝 Other (explain)']]
+      },
+      'Social Studies': {
+        q: ['How could we learn about this community idea? Explain.','What helps you compare past and present? Tell why.'],
+        a: [['Consider different viewpoints','Use a map or timeline','Connect to our community','📝 Other (explain)']]
+      },
+      Drama: {
+        q: ['How could you show a feeling on stage? Explain.','What could improve your scene? Tell why.'],
+        a: [['Change voice or volume','Use body/space','Add a prop or gesture','📝 Other (explain)']]
+      },
+      Dance: {
+        q: ['How could you show this idea with movement? Explain.','What will help your group stay in sync? Tell why.'],
+        a: [['Use levels (high/low)','Repeat a pattern','Count the beat','📝 Other (explain)']]
+      },
+      'Visual Arts': {
+        q: ['How could you show contrast in your art? Explain.','What will make your idea stand out? Tell why.'],
+        a: [['Change color or shade','Use line/texture','Plan with a quick sketch','📝 Other (explain)']]
+      },
+      Music: {
+        q: ['How can you make the melody clearer? Explain.','What would improve our rhythm? Tell why.'],
+        a: [['Listen for balance','Count and clap first','Change volume (dynamics)','📝 Other (explain)']]
+      },
+      'Phys-Ed': {
+        q: ['What helps us play safely and fairly? Explain.','How can you include everyone in this game? Tell why.'],
+        a: [['Use kind teamwork','Make space or pass','Set fair rules','📝 Other (explain)']]
+      }
+    };
+    const bank = banks[subject] || banks.General;
+    const q = bank.q[Math.floor(Math.random()*bank.q.length)];
+    const a4 = T(bank.a[0]);
+    const arr = (count>=4? a4 : a4.slice(0,count));
+    // ensure Other last for 3–4
+    if(count>=3){
+      const other = arr.find(c=>/other/i.test(c)) || '📝 Other (explain)';
+      const rest = arr.filter(c=>!/other/i.test(c));
+      return { question:q, choices: rest.slice(0, count-1).concat(other) };
+    }
+    return {question:q, choices:arr};
+  }
+
+  async function getQnA(count, kw, grade, subject){
+    try { return await geminiGenerateQnA(count, kw, grade, subject); }
+    catch(e){ console.warn('Gemini error → offline bank:', e); return offlineBank(count, subject, kw); }
+  }
+
+  /* ====================== SETTINGS / UI WIRING ====================== */
+  $('#randomBtn').onclick = randomPick;
+  $('#openSettings').onclick = openSettings;
+  $('#quickReset').onclick = ()=>{ allToParking(); showToast('All badges returned to Parking'); };
+
+  function openSettings(){
+    const saved = load('mxq_choices_v10');
+    $('#qInput').value = saved?.q || questionEl.textContent || '';
+    const mode = saved?.mode || '4';
+    $('#choiceCount').value = mode;
+    const currentChoices = saved?.choices || $$('.zone h3').map(h=>h.textContent.trim());
+    ['a1','a2','a3','a4'].forEach((id,idx)=> $('#'+id).value = (currentChoices[idx]||''));
+    // load last grade/subject/keywords
+    $('#gradeInput').value = load('mxq_grade',"3");
+    $('#subjectInput').value = load('mxq_subject',"General");
+    $('#keywordInput').value = load('mxq_keywords',"");
+    toggleAnswerFields(mode);
+    $('#settingsModal').classList.add('show');
+    updateAIStatusLabels();
+  }
+  function toggleAnswerFields(mode){
+    const grid = $('.answers-grid');
+    grid.style.display = (mode==='open') ? 'none' : 'grid';
+    const show = n => $('#a'+n).parentElement.style.display='flex';
+    const hide = n => $('#a'+n).parentElement.style.display='none';
+    show(1); show(2); show(3); show(4);
+    if(mode==='2'){ hide(3); hide(4); }
+    if(mode==='3'){ show(3); hide(4); }
+    if(mode==='4'){ show(3); show(4); }
+  }
+  $('#choiceCount').onchange = (e)=> toggleAnswerFields(e.target.value);
+
+  $('#presetMood').onclick = ()=>{
+    questionEl.textContent = moodPreset.q;
+    buildZones(moodPreset.choices, moodPreset.colors);
+    save('mxq_choices_v10', {q:moodPreset.q, choices:moodPreset.choices, colors:moodPreset.colors, mode:'4'});
+    relabelBadges(); updateStats();
+    $('#settingsModal').classList.remove('show');
+  };
+
+  $('#applySettings').onclick = ()=>{
+    const mode = $('#choiceCount').value;
+    const q = $('#qInput').value.trim() || 'Which choice fits you best today? Explain why.';
+    let lines = [];
+    if(mode!=='open'){
+      lines = [$('#a1').value, $('#a2').value, $('#a3').value, $('#a4').value].map(s=>s.trim()).filter(Boolean);
+    }
+    questionEl.textContent = q;
+    applyChoicesFrom(mode, lines);
+    const saved = load('mxq_choices_v10')||{};
+    save('mxq_choices_v10', {...saved, q});
+    // save grade/subject/keywords
+    save('mxq_grade', $('#gradeInput').value);
+    save('mxq_subject', $('#subjectInput').value);
+    save('mxq_keywords', $('#keywordInput').value);
+    $('#settingsModal').classList.remove('show');
+  };
+  $('#closeSettings').onclick = ()=>$('#settingsModal').classList.remove('show');
+
+  // AI modal
+  $('#aiBtn').onclick = ()=>{
+    $('#aiKey').value  = load('mxq_ai_key') || GEMINI_KEY_DEFAULT || '';
+    $('#aiModel').value = load('mxq_ai_model') || GEMINI_MODEL_DEFAULT || 'gemini-1.5-flash';
+    $('#aiModal').classList.add('show'); updateAIStatusLabels();
+  };
+  $('#aiSave').onclick = ()=>{
+    save('mxq_ai_key',  $('#aiKey').value.trim());
+    save('mxq_ai_model',$('#aiModel').value.trim());
+    $('#aiModal').classList.remove('show'); showToast('AI settings saved'); updateAIStatusLabels();
+  };
+  $('#aiClose').onclick = ()=>$('#aiModal').classList.remove('show');
+  $('#aiTest').onclick = async ()=>{ $('#aiStatusDetail').textContent='Status: testing…'; const ok=await testAIConnection(); updateAIStatusLabels(); showToast(ok?'AI connected':'AI not connected'); };
+
+  // Roster modal
+  $('#openRoster').onclick = ()=>$('#rosterModal').classList.add('show');
+  $('#closeRoster').onclick = ()=>$('#rosterModal').classList.remove('show');
+  $('#applyRoster').onclick = ()=>{ applyRoster(); $('#rosterModal').classList.remove('show'); };
+
+  // Layout controls
+  $('#saveBtn').onclick = ()=>{
+    const layout=badges.map(b=>({ name:b.textContent.trim(), left:b.style.left, top:b.style.top, zone:b.dataset.zone, hidden:b.classList.contains('pickedHidden'), ig:b.dataset.ignore==='true' }));
+    save('mxq_layout', layout); showToast('Layout saved');
+  };
+  $('#loadBtn').onclick = ()=>{
+    const layout=load('mxq_layout'); if(!layout){ showToast('No saved layout'); return; }
+    const map=new Map(layout.map(x=>[x.name,x]));
+    badges.forEach(b=>{
+      const rec=map.get(b.textContent.trim());
+      if(rec){ b.style.left=rec.left; b.style.top=rec.top; b.dataset.zone=rec.zone; b.dataset.lastX=rec.left; b.dataset.lastY=rec.top; b.classList.toggle('pickedHidden', !!rec.hidden); }
+    });
+    updateStats(); showToast('Layout loaded');
+  };
+  $('#allToParkingBtn').onclick = ()=>{ allToParking(); showToast('All badges returned to Parking'); };
+  $('#resetWeekBtn').onclick = resetWeekOnly;
+
+  $('#closeWinner').onclick = ()=>$('#winnerModal').classList.remove('show');
+
+  /* ====================== BOOT ====================== */
+  async function boot(){
+    // roster
+    const savedRoster = load('mxq_roster');
+    roster = savedRoster ? savedRoster : $('#rosterInput').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    ensureWeek();
+    makeBadges(true); // ensure everyone starts in Parking and spread wide
+
+    // initial AI attempt, fallback to offline
+    const grade = load('mxq_grade','3');
+    const subject = load('mxq_subject','General');
+    try{
+      const qna = await getQnA(4, load('mxq_keywords',''), grade, subject);
+      questionEl.textContent = qna.question || 'Which choice fits you best today? Explain why.';
+      applyChoicesFrom('4', qna.choices && qna.choices.length ? qna.choices : ['Estimate','Use a model','Ask a question','📝 Other (explain)']);
+    }catch(e){
+      const qna = offlineBank(4, subject, '');
+      questionEl.textContent = qna.question;
+      applyChoicesFrom('4', qna.choices);
+    }
+    updateAIStatusLabels();
+
+    // Re-spread if window resizes (keeps them neat at the top of Parking)
+    let spreadTimer;
+    window.addEventListener('resize', ()=>{
+      clearTimeout(spreadTimer);
+      spreadTimer=setTimeout(()=>distributeInParking(false), 150);
+    });
+  }
+  boot();
+
+  // Generate with AI (from Settings)
+  $('#genBtn').onclick = async ()=>{
+    try{
+      const mode = $('#choiceCount').value;
+      const kw = $('#keywordInput').value;
+      const grade = $('#gradeInput').value;
+      const subject = $('#subjectInput').value;
+      const count = (mode==='open') ? 4 : parseInt(mode,10);
+      const qna = await getQnA(count, kw, grade, subject);
+      $('#qInput').value = qna.question;
+      if(mode!=='open'){
+        const arr = qna.choices.slice(0, count);
+        $('#a1').value = arr[0]||''; $('#a2').value = arr[1]||''; $('#a3').value = arr[2]||''; $('#a4').value = arr[3]||'';
+      }
+      // remember grade/subject/keywords
+      save('mxq_grade', grade);
+      save('mxq_subject', subject);
+      save('mxq_keywords', kw);
+      showToast('AI suggestion filled — press OK to apply');
+    }catch(err){
+      showToast('AI error: ' + (err.message||err));
+    }
+  };
+
+  /* ====================== AI STATUS ====================== */
+  async function testAIConnection(){
+    try{
+      const r = await geminiGenerateQnA(2, 'test', '3', 'General');
+      const ok = !!(r && r.question && Array.isArray(r.choices) && r.choices.length===2);
+      save('mxq_ai_status',{ok, provider:'gemini', time:Date.now()});
+      return ok;
+    }catch(e){
+      save('mxq_ai_status',{ok:false, provider:'gemini', time:Date.now()});
+      return false;
+    }
+  }
+  function updateAIStatusLabels(){
+    const s = load('mxq_ai_status');
+    const main = $('#aiStatusMain'), det = $('#aiStatusDetail');
+    if(!s){ if(main) main.textContent='AI: not checked'; if(det) det.textContent='Status: not checked'; return; }
+    const t = new Date(s.time).toLocaleTimeString();
+    const msg = s.ok? `Connected ✅ (gemini)` : `Not connected ❌ (gemini)`;
+    if(main) main.textContent='AI: '+msg+` [${t}]`;
+    if(det) det.textContent='Status: '+msg+` (last check ${t})`;
+  }
+})();
+</script>
+</body>
+</html>
