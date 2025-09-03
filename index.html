@@ -19,15 +19,25 @@
   html,body{height:100%;margin:0;background:radial-gradient(1200px 900px at 10% 0%, #0d1634, #0a0f1e 60%);color:var(--ink);font-family:'Lexend',system-ui,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden;min-height:100vh;min-width:100vw}
   *{user-select:none} input,textarea,select,button{user-select:text}
 
-  .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:0;height:100vh;padding:12px;box-sizing:border-box;box-sizing:border-box}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:0;height:100vh;padding:12px;box-sizing:border-box;min-height:100vh;overflow:visible;max-height:100vh}
 
 /* SMART Board optimization - only apply 16:9 when screen is very wide (like 4K displays) */
 @media screen and (min-width: 3000px) {
   .app {
     aspect-ratio: 16/9;
     width: 100vw;
-    max-height: 100vh;
-    overflow: hidden;
+    max-height: 90vh; /* Reduced to account for SMART Board toolbar */
+    overflow: visible;
+    padding: 8px; /* Reduced padding to save space */
+  }
+  
+  /* Ensure bottom row is always visible on SMART Board */
+  .stepsRow {
+    position: sticky;
+    bottom: 0;
+    margin-top: 4px;
+    height: 44px;
+    padding: 6px 10px;
   }
 }
 
@@ -37,17 +47,69 @@
   .stat{background:#0b1226;border:1px solid var(--stroke);border-radius:12px;padding:6px 10px;font-weight:700}
 
   .actions{display:flex;gap:10px;align-items:center;justify-content:flex-end}
-  .topbtn{background:#0b1226;border:1px solid var(--stroke);color:var(--ink);padding:10px 14px;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 10px 20px rgba(0,0,0,.35);transition:.12s transform,.12s box-shadow;height:42px;display:inline-flex;align-items:center}
+  .topbtn{background:#0b1226;border:1px solid var(--stroke);color:var(--ink);padding:10px 14px;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 10px 20px rgba(0,0,0,.35);transition:.12s transform,.12s box-shadow;height:42px;display:inline-flex;align-items:center;touch-action:manipulation;min-height:44px}
   .topbtn:active{transform:translateY(1px) scale(.98);box-shadow:0 6px 12px rgba(0,0,0,.35)}
-  #randomBtn{background:radial-gradient(120% 120% at 10% 0%, var(--brand2), var(--brand1));color:#06121a;border:none}
+  #randomBtn{background:radial-gradient(120% 120% at 10% 0%, var(--brand2), var(--brand1));color:#06121a;border:none;touch-action:manipulation}
+  
+  /* Enhanced touch support for critical action buttons */
+  #genBtn, #quickReset, #openSettings {
+    touch-action: manipulation;
+    min-height: 44px;
+  }
+  
+  #genBtn:active, #quickReset:active, #openSettings:active {
+    transform: scale(0.98);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  }
+  
+  /* Enhanced touch support for read button on SMART Boards */
+  #readAloudBtn {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  #readAloudBtn:active {
+    transform: scale(0.95);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  }
+  
+  /* Enhanced touch support for inquiry agent logo */
+  #inquiryAgentLogo {
+    touch-action: manipulation;
+    min-width: 40px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  #inquiryAgentLogo:active {
+    transform: translateY(-50%) scale(0.95) !important;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  }
 
   /* Timer (center) */
   .timerWrap{display:flex;align-items:center;justify-content:center;gap:8px}
   .timerBox{display:flex;align-items:center;gap:8px;background:#0b1226;border:1px solid var(--stroke);border-radius:12px;padding:6px 10px}
   .time{font-weight:900;font-size:20px;min-width:70px;text-align:center}
-  .tbtn{background:#0c1428;border:1px solid #1f2937;color:#dbeafe;border-radius:10px;padding:6px 10px;font-weight:800;cursor:pointer}
-  .tbtn:active{transform:translateY(1px)}
-
+  .tbtn{background:#0c1428;border:1px solid #1f2937;color:#dbeafe;border-radius:10px;padding:8px 12px;font-weight:800;cursor:pointer;touch-action:manipulation;min-width:44px;min-height:44px}
+    .tbtn:active{transform:translateY(1px) scale(0.98);box-shadow:inset 0 2px 4px rgba(0,0,0,0.3)}
+  
+  /* Enhanced touch support for small group size buttons */
+  #decreaseGroupSize, #increaseGroupSize {
+    touch-action: manipulation;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 12px !important;
+  }
+  
+  #decreaseGroupSize:active, #increaseGroupSize:active {
+    transform: scale(0.95);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  }
+  
   /* Question */
   .questionRow{display:flex;justify-content:center;align-items:stretch;gap:20px;position:relative;z-index:60;height:fit-content;min-height:auto}
   .question{
@@ -76,7 +138,7 @@
 @media screen and (min-width: 3000px) {
   .stage {
     aspect-ratio: 16/9;
-    max-height: calc(100vh - 200px);
+    max-height: calc(100vh - 250px); /* Increased space for bottom row */
   }
 }
   #badgeLayer{position:absolute;inset:0;z-index:10000;pointer-events:none}
@@ -97,14 +159,33 @@
   #parkingLabel{position:absolute;top:14px;left:16px;background:rgba(2,6,23,.8);border:1px solid #1f2937;color:#cbd5e1;padding:6px 10px;border-radius:10px;font-weight:900;font-size:14px;box-shadow:0 8px 18px rgba(0,0,0,.35)}
 
   /* Steps row */
-  .stepsRow{display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;height:48px;background:#0b1226;border:1px solid var(--stroke);border-radius:12px;white-space:nowrap;flex-shrink:0;margin-top:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);position:relative;z-index:100}
+  .stepsRow{display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 12px;height:40px;background:#0b1226;border:1px solid var(--stroke);border-radius:12px;white-space:nowrap;flex-shrink:0;margin-top:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);position:relative;z-index:100;min-height:40px;max-height:40px;overflow:visible}
 
 /* Ensure steps row is always visible on all screen sizes */
 @media screen and (max-height: 800px) {
   .stepsRow {
-    height: 42px;
+    height: 40px;
     padding: 6px 10px;
     margin-top: 4px;
+  }
+}
+
+/* Extra protection for very wide screens (SMART Boards) */
+@media screen and (min-width: 3000px) and (min-height: 1000px) {
+  .app {
+    max-height: 90vh; /* Leave more space for SMART Board toolbars */
+  }
+  
+  .stage {
+    max-height: calc(90vh - 250px); /* Ensure stage doesn't push bottom row off screen */
+  }
+  
+  .stepsRow {
+    position: sticky;
+    bottom: 0;
+    background: #0b1226;
+    border-top: 2px solid var(--stroke);
+    z-index: 1000;
   }
 }
   .stepPill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-weight:900;font-size:14px;background:#0f172a;border:1px solid #1f2937}
@@ -141,17 +222,30 @@
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .pair{display:flex;align-items:center;gap:8px;margin-right:16px}
   .sheet input,.sheet select,.sheet textarea,.sheet button{font-size:16px;border-radius:12px;border:1px solid #334155;background:#0b1226;color:var(--ink);padding:10px 12px}
-  .sheet button{box-shadow:0 8px 18px rgba(0,0,0,.35)}
+  .sheet button{box-shadow:0 8px 18px rgba(0,0,0,.35);touch-action:manipulation;min-height:44px}
   .sheet button:active{transform:translateY(1px) scale(.98);box-shadow:0 6px 12px rgba(0,0,0,.35)}
   .answers-grid{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
   .answers-grid .a{display:flex;gap:8px;align-items:center}
   .answers-grid .lbl{width:130px;font-weight:800;text-align:right;opacity:.9}
   .answers-grid input{flex:1}
 
-  .btn-primary{background:linear-gradient(180deg,#34d399,#22c55e);color:#05220f;border:1px solid #166b3b}
-  .btn-ghost{background:#0b1226;border:1px solid #1f2937;color:#d1d5db}
+  .btn-primary{background:linear-gradient(180deg,#34d399,#22c55e);color:#05220f;border:1px solid #166b3b;touch-action:manipulation}
+  .btn-ghost{background:#0b1226;border:1px solid #1f2937;color:#d1d5db;touch-action:manipulation}
+  
+  /* Enhanced touch support for AI model buttons */
+  .model-btn {
+    touch-action: manipulation;
+    min-width: 48px;
+    min-height: 44px;
+    padding: 6px 10px !important;
+  }
+  
+  .model-btn:active {
+    transform: scale(0.95);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  }
 
-  .switch{position:relative;width:56px;height:30px;background:#0c1428;border:1px solid #1f2937;border-radius:999px;cursor:pointer}
+  .switch{position:relative;width:56px;height:30px;background:#0c1428;border:1px solid #1f2937;border-radius:999px;cursor:pointer;touch-action:manipulation;min-height:44px}
   .switch input{display:none}
   .knob{position:absolute;top:3px;left:3px;width:24px;height:24px;background:#cbd5e1;border-radius:50%;transition:left .18s}
   .switch input:checked + .knob{left:29px;background:#34d399}
@@ -162,12 +256,12 @@
 
   /* Response buttons */
   .response-buttons{display:flex;gap:8px}
-  .response-btn{background:#0c1428;border:1px solid #1f2937;color:#dbeafe;border-radius:10px;padding:8px 16px;font-weight:800;cursor:pointer;transition:all .2s}
+  .response-btn{background:#0c1428;border:1px solid #1f2937;color:#dbeafe;border-radius:10px;padding:10px 18px;font-weight:800;cursor:pointer;transition:all .2s;touch-action:manipulation;min-width:48px;min-height:44px}
   .response-btn:hover{background:#0f172a;border-color:#334155}
   .response-btn.active{background:linear-gradient(180deg,#34d399,#22c55e);color:#05220f;border-color:#166b3b}
 
   /* Preset buttons */
-  .preset-btn{background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:10px;padding:8px 16px;font-weight:800;cursor:pointer;transition:all .2s}
+  .preset-btn{background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:10px;padding:10px 18px;font-weight:800;cursor:pointer;transition:all .2s;touch-action:manipulation;min-width:48px;min-height:44px}
   .preset-btn:hover{background:#1e293b;border-color:#475569;color:#cbd5e1}
 
   #settingsModal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);display:none;justify-content:center;align-items:center;z-index:99999}
@@ -235,13 +329,19 @@
     <div class="zones" id="zones"></div>
     <div class="parking" id="parking"><div id="parkingPad"></div><div id="parkingLabel">🅿️ Parking Lot / Absent</div></div>
     <div class="stepsRow" style="position: relative;">
-      <div class="stepPill">📖 READ</div><span class="stepSep">›</span>
-      <div class="stepPill">🤔 THINK</div><span class="stepSep">›</span>
-      <div class="stepPill">👥 DISCUSS</div><span class="stepSep">›</span>
-      <div class="stepPill">➡️ MOVE</div><span class="stepSep">›</span>
-      <div class="stepPill">🗣️ EXPLAIN</div>
+      <div id="inquiryAgentLogo" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-family: 'Arial Black', 'Helvetica Bold', sans-serif; font-weight: 900; font-size: 16px; color: #00d4ff; text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff; cursor: pointer; user-select: none; transition: all 0.3s ease; padding: 6px 10px; border-radius: 6px; background: linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(0,212,255,0.05) 100%); border: 1px solid rgba(0,212,255,0.3); z-index: 5; line-height: 1;" title="Click for app info" onmouseover="this.style.transform='translateY(-50%) scale(1.05)'; this.style.textShadow='0 0 15px #00d4ff, 0 0 25px #00d4ff, 0 0 35px #00d4ff';" onmouseout="this.style.transform='translateY(-50%) scale(1)'; this.style.textShadow='0 0 10px #00d4ff, 0 0 20px #00d4ff';">INQUIRY AGENT</div>
+      
+      <!-- Centered steps container -->
+      <div style="display: flex; justify-content: center; align-items: center; width: 100%;">
+        <div class="stepPill">📖 READ</div><span class="stepSep">›</span>
+        <div class="stepPill">🤔 THINK</div><span class="stepSep">›</span>
+        <div class="stepPill">👥 DISCUSS</div><span class="stepSep">›</span>
+        <div class="stepPill">➡️ MOVE</div><span class="stepSep">›</span>
+        <div class="stepPill">🗣️ EXPLAIN</div>
+      </div>
       
       <!-- Question source indicators - positioned on the right side -->
+      <div id="manualIndicator" style="position: absolute; right: 70px; top: 50%; transform: translateY(-50%); background: #4CAF50; color: white; border-radius: 50%; width: 24px; height: 24px; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; z-index: 10; opacity: 0.9; border: 2px solid #0a0f1e;">M</div>
       <div id="aiIndicator" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: white; color: #0a0f1e; border-radius: 50%; width: 24px; height: 24px; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; z-index: 10; opacity: 0.9; border: 2px solid #0a0f1e;">A</div>
       <div id="bankIndicator" style="position: absolute; right: 40px; top: 50%; transform: translateY(-50%); background: #6b7280; color: white; border-radius: 50%; width: 24px; height: 24px; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; z-index: 10; opacity: 0.8; border: 2px solid #0a0f1e;">B</div>
     </div>
@@ -253,17 +353,14 @@
 <div class="modal" id="settingsModal"><div class="sheet">
   <h2>⚙️ Settings</h2>
 
-  <!-- 1. Question -->
+  <!-- 1. Question, Responses & Answer Fields -->
   <section>
     <div class="row">
       <label style="min-width:110px;font-weight:800">Question</label>
       <input id="qInput" placeholder="Daily question (or generate with AI)" style="flex:1"/>
     </div>
-  </section>
-
-  <!-- 2. Responses -->
-  <section>
-    <div class="row" style="gap:16px">
+    
+    <div class="row" style="gap:16px;margin-top:12px">
       <div class="pair">
         <label style="min-width:110px;font-weight:800">Responses</label>
         <div class="response-buttons">
@@ -275,15 +372,14 @@
         </div>
       </div>
     </div>
-  </section>
-
-  <!-- 3. Response fields -->
-  <section id="answersWrap">
-    <div class="answers-grid">
-      <div class="a"><div class="lbl">Answer A</div><input id="a1" value="Work alone"></div>
-      <div class="a"><div class="lbl">Answer B</div><input id="a2" value="Work with a partner"></div>
-      <div class="a"><div class="lbl">Answer C</div><input id="a3" value="Ask a teacher"></div>
-      <div class="a"><div class="lbl">Answer D</div><input id="a4" value="Try a new strategy"></div>
+    
+    <div id="answersWrap" style="margin-top:12px">
+      <div class="answers-grid">
+        <div class="a"><div class="lbl">Answer A</div><input id="a1" value="Work alone"></div>
+        <div class="a"><div class="lbl">Answer B</div><input id="a2" value="Work with a partner"></div>
+        <div class="a"><div class="lbl">Answer C</div><input id="a3" value="Ask a teacher"></div>
+        <div class="a"><div class="lbl">Answer D</div><input id="a4" value="Try a new strategy"></div>
+      </div>
     </div>
   </section>
 
@@ -297,7 +393,7 @@
     <div class="row" style="margin-top:12px">
       <div class="pair">
         <label style="font-weight:800">Grade</label>
-        <select id="gradeInput"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+        <select id="gradeInput"><option selected>-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
       </div>
       <div class="pair">
         <label style="font-weight:800">Concise</label>
@@ -311,27 +407,27 @@
     <div class="row" style="margin-top:12px">
       <div class="pair"><label style="font-weight:800">Bloom's</label>
         <select id="bloomsInput">
-          <option>Remember</option><option>Understand</option><option>Apply</option><option>Analyze</option>
-          <option selected>Evaluate</option><option>Create</option>
+          <option selected>-</option><option>Remember</option><option>Understand</option><option>Apply</option><option>Analyze</option>
+          <option>Evaluate</option><option>Create</option>
         </select>
       </div>
       <div class="pair"><label style="font-weight:800">Subject</label>
         <select id="subjectInput">
-          <option selected>General</option><option>Math</option><option>Language</option><option>Science</option>
+          <option selected>-</option><option>Math</option><option>Language</option><option>Science</option>
           <option>Social Studies</option><option>Drama</option><option>Dance</option>
           <option>Visual Arts</option><option>Music</option><option>Phys-Ed</option>
         </select>
       </div>
       <div class="pair"><label style="font-weight:800">Learning Skill</label>
         <select id="lsInput">
-          <option selected>General</option>
+          <option selected>-</option>
           <option>Responsibility</option><option>Organization</option><option>Independent Work</option>
           <option>Collaboration</option><option>Initiative</option><option>Self-Regulation</option>
         </select>
       </div>
       <div class="pair"><label style="font-weight:800">SEL</label>
         <select id="selInput">
-          <option value="">(optional)</option>
+          <option selected>-</option>
           <!-- options injected by JS from SEL_TOPICS -->
         </select>
       </div>
@@ -346,17 +442,6 @@
 
   </section>
 
-  <!-- Tools row -->
-  <section>
-    <div class="row" style="gap:12px;flex-wrap:wrap">
-      <button id="openRoster">👥 Edit Roster</button>
-      <button id="saveBtn">💾 Save Layout</button>
-      <button id="loadBtn">⭳ Load Layout</button>
-      <button id="allToParkingBtn">🅿️ All to Parking</button>
-      <button id="resetWeekBtn">🗓️ Reset Week</button>
-    </div>
-  </section>
-
   <!-- Preset buttons row -->
   <section>
     <div class="row" style="gap:12px;flex-wrap:wrap">
@@ -366,9 +451,63 @@
     </div>
   </section>
 
+  <!-- Tools row -->
+  <section>
+    <div class="row" style="gap:12px;flex-wrap:wrap">
+      <button id="openRoster">👥 Edit Roster</button>
+      <button id="saveBtn">💾 Save Layout</button>
+      <button id="loadBtn">⭳ Load Layout</button>
+      <button id="resetWeekBtn">🗓️ Reset Week</button>
+      <button id="resetQuestionsBtn" style="background: #dc2626; color: white; border-color: #dc2626;">🔄 Reset Questions</button>
+    </div>
+  </section>
+
   <div class="row" style="justify-content:center;margin-top:16px;gap:20px">
     <button id="applySettings" class="btn-primary" style="font-weight:900;padding:14px 24px;font-size:18px">✅ OK</button>
     <button id="closeSettings" class="btn-ghost" style="padding:14px 24px;font-size:18px">Cancel</button>
+  </div>
+</div></div>
+
+<!-- Info Dialog Modal -->
+<div class="modal" id="infoModal"><div class="sheet">
+  <h2 style="text-align: center; color: #00d4ff; text-shadow: 0 0 10px #00d4ff;">🚀 INQUIRY AGENT</h2>
+  <p style="text-align: center; font-style: italic; color: #666; margin-bottom: 20px;">Designed by Tony Cushman (2025)</p>
+  
+  <div style="margin-bottom: 20px;">
+    <h3 style="color: #333; border-bottom: 2px solid #00d4ff; padding-bottom: 5px;">🎯 How to Use</h3>
+    <p><strong>1.</strong> Use the <strong>Generate with AI</strong> button to create questions based on your filters</p>
+    <p><strong>2.</strong> Students move their names into response zones based on their answers</p>
+    <p><strong>3.</strong> Use the <strong>Random Pick</strong> button to select students to explain their thinking</p>
+    <p><strong>4.</strong> Students can be moved to partner areas or help zones as needed</p>
+  </div>
+  
+  <div style="margin-bottom: 20px;">
+    <h3 style="color: #333; border-bottom: 2px solid #00d4ff; padding-bottom: 5px;">⌨️ Hotkeys</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div><strong>R</strong> - Reset all students to parking</div>
+      <div><strong>G</strong> - Generate new question</div>
+      <div><strong>S</strong> - Open settings</div>
+      <div><strong>A</strong> - Open AI settings</div>
+      <div><strong>1-4</strong> - Set response mode</div>
+      <div><strong>W</strong> - Would you rather mode</div>
+      <div><strong>T</strong> - Open timer</div>
+      <div><strong>P</strong> - Create partners</div>
+      <div><strong>Enter</strong> - Generate question</div>
+      <div><strong>Space</strong> - Random pick</div>
+    </div>
+  </div>
+  
+  <div style="margin-bottom: 20px;">
+    <h3 style="color: #333; border-bottom: 2px solid #00d4ff; padding-bottom: 5px;">⚙️ Features</h3>
+    <p><strong>•</strong> AI-powered question generation with Ontario curriculum alignment</p>
+    <p><strong>•</strong> Flexible response modes (2-4 choices, open-ended, would you rather)</p>
+    <p><strong>•</strong> Student management with drag-and-drop functionality</p>
+    <p><strong>•</strong> Timer, partner creation, and random student selection</p>
+    <p><strong>•</strong> Layout saving and loading for different class configurations</p>
+  </div>
+  
+  <div style="text-align: center; margin-top: 30px;">
+    <button id="closeInfo" class="btn-primary" style="padding: 12px 24px; font-size: 16px;">Got it!</button>
   </div>
 </div></div>
 
@@ -465,6 +604,69 @@ August</textarea>
       this.master = null;
       this.loops = new Map();
       this.ready = false;
+      this.audioQuality = 'high'; // 'high' or 'compatible'
+      this.detectAudioQuality();
+    }
+    
+    // Detect if we're on a lower-end system that needs audio compatibility mode
+    detectAudioQuality() {
+      try {
+        // Check if we're on a SMART Board or similar system
+        const isSMARTBoard = window.navigator.userAgent.includes('SMART') || 
+                           window.navigator.userAgent.includes('Board') ||
+                           window.screen.width >= 3000 || // Very wide screen
+                           window.screen.height >= 2000;  // Very tall screen
+        
+        // Check Web Audio API support
+        const audioContext = window.AudioContext || window.webkitAudioContext;
+        if (!audioContext) {
+          this.audioQuality = 'compatible';
+          return;
+        }
+        
+        // Test audio context creation
+        const testCtx = new audioContext();
+        if (testCtx.state === 'running' || testCtx.state === 'suspended') {
+          testCtx.close();
+        }
+        
+        // Check for manual override in localStorage
+        const manualQuality = localStorage.getItem('mxq_audio_quality');
+        if (manualQuality === 'high' || manualQuality === 'compatible') {
+          this.audioQuality = manualQuality;
+          console.log('Using manual audio quality setting:', manualQuality);
+          return;
+        }
+        
+        // Set quality based on system detection
+        if (isSMARTBoard) {
+          this.audioQuality = 'compatible';
+          console.log('SMART Board detected - using compatible audio mode');
+        } else {
+          this.audioQuality = 'high';
+          console.log('High-end system detected - using high-quality audio mode');
+        }
+      } catch (error) {
+        console.log('Audio quality detection failed, using compatible mode:', error);
+        this.audioQuality = 'compatible';
+      }
+    }
+    
+    // Manual audio quality toggle
+    setAudioQuality(quality) {
+      if (quality === 'high' || quality === 'compatible') {
+        this.audioQuality = quality;
+        localStorage.setItem('mxq_audio_quality', quality);
+        console.log('Audio quality manually set to:', quality);
+        
+        // Stop any active loops to apply new settings
+        this.stopShuffleLoop();
+      }
+    }
+    
+    // Get current audio quality setting
+    getAudioQuality() {
+      return this.audioQuality;
     }
     getCtx() {
       if(!this.ctx || this.ctx.state === 'closed') {
@@ -480,25 +682,30 @@ August</textarea>
       this.getCtx();
       this.ready = true;
     }
-    // Synthesized SMB3 coin sound
+    // Synthesized SMB3 coin sound - SMART Board compatible version
     playCoin({volume=1, rate=1, detune=0}={}) {
       const ctx = this.getCtx();
       const t0 = ctx.currentTime;
       
-      // SMB3 coin: bright square wave with quick decay
+      // SMB3 coin: use triangle wave for better compatibility, with fallback
       const o = ctx.createOscillator();
-      o.type = 'square';
+      // Try triangle first, fallback to sine if triangle isn't supported
+      try {
+        o.type = 'triangle';
+      } catch {
+        o.type = 'sine';
+      }
       o.frequency.setValueAtTime(1568 * rate, t0);
       if('detune' in o) o.detune.value = detune;
       
       const g = ctx.createGain();
       g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(volume * 0.8, t0 + 0.001);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06);
+      g.gain.exponentialRampToValueAtTime(volume * 0.7, t0 + 0.002); // Gentler attack
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08); // Slightly longer decay
       
       o.connect(g).connect(this.master);
       o.start(t0);
-      o.stop(t0 + 0.08);
+      o.stop(t0 + 0.1);
     }
     // Synthesized SMB3 1-UP sound
     playOneUp({volume=1, rate=1}={}) {
@@ -705,27 +912,47 @@ August</textarea>
         }
       }, (time - t0 + 0.2) * 1000);
     }
-    // Synthesized shuffle loop
+    // Synthesized shuffle loop - SMART Board compatible version
     startShuffleLoop({volume=0.6, rate=1}={}) {
       this.stopShuffleLoop();
       const ctx = this.getCtx();
       
+      // Adjust settings based on detected audio quality
+      const isCompatible = this.audioQuality === 'compatible';
+      
       const playShuffleTick = () => {
         const o = ctx.createOscillator();
-        o.type = 'square';
-        o.frequency.setValueAtTime(800 * rate, ctx.currentTime);
+        
+        if (isCompatible) {
+          // Compatible mode: sine wave, lower frequency, gentler settings
+          o.type = 'sine';
+          o.frequency.setValueAtTime(500 * rate, ctx.currentTime); // Even lower frequency
+        } else {
+          // High quality mode: triangle wave, higher frequency, crisp settings
+          o.type = 'triangle';
+          o.frequency.setValueAtTime(800 * rate, ctx.currentTime);
+        }
         
         const g = ctx.createGain();
         g.gain.setValueAtTime(0.0001, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(volume * 0.4, ctx.currentTime + 0.001);
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
+        
+        if (isCompatible) {
+          // Gentler attack and longer decay for compatibility
+          g.gain.exponentialRampToValueAtTime(volume * 0.25, ctx.currentTime + 0.003);
+          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+        } else {
+          // Crisp attack and quick decay for high quality
+          g.gain.exponentialRampToValueAtTime(volume * 0.4, ctx.currentTime + 0.001);
+          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06);
+        }
         
         o.connect(g).connect(this.master);
         o.start();
-        o.stop(ctx.currentTime + 0.06);
+        o.stop(ctx.currentTime + (isCompatible ? 0.15 : 0.08));
       };
       
-      const interval = setInterval(playShuffleTick, 120);
+      // Adjust interval based on audio quality
+      const interval = setInterval(playShuffleTick, isCompatible ? 180 : 120);
       this.loops.set('shuffle', {interval});
     }
     stopShuffleLoop() {
@@ -852,6 +1079,8 @@ August</textarea>
     const old = document.getElementById('question');
     console.log('Found question row:', row);
     console.log('Found old question element:', old);
+    console.log('Question row exists:', !!row);
+    console.log('Old question element exists:', !!old);
     
     const n = document.createElement('div');
     n.className = old.className; n.id = 'question';
@@ -918,8 +1147,8 @@ August</textarea>
       questionEl.style.fontSize = fontSize + 'px';
     }
   }
-  function setQuestionSafe(q, wasRepaired = false, fromBank = false){
-    console.log('setQuestionSafe called with:', q, 'wasRepaired:', wasRepaired, 'fromBank:', fromBank);
+  function setQuestionSafe(q, wasRepaired = false, fromBank = false, isManual = false){
+    console.log('setQuestionSafe called with:', q, 'wasRepaired:', wasRepaired, 'fromBank:', fromBank, 'isManual:', isManual);
     let text = (q||'').trim();
     console.log('Trimmed text:', text);
     localStorage.setItem('mxq_last_question_raw', text);
@@ -932,10 +1161,22 @@ August</textarea>
       localStorage.removeItem('mxq_question_repaired');
     }
     
-    // Show/hide AI indicator (white A)
+    // Show/hide manual indicator (green M)
+    const manualIndicator = document.getElementById('manualIndicator');
+    if (manualIndicator) {
+      if (isManual) {
+        manualIndicator.style.display = 'flex';
+        manualIndicator.title = 'Manual question (typed or edited)';
+      } else {
+        manualIndicator.style.display = 'none';
+        manualIndicator.title = '';
+      }
+    }
+    
+    // Show/hide AI indicator (white A) - only if not manual
     const aiIndicator = document.getElementById('aiIndicator');
     if (aiIndicator) {
-      if (!fromBank) {
+      if (!fromBank && !isManual) {
         aiIndicator.style.display = 'flex';
         aiIndicator.title = 'AI generated question';
       } else {
@@ -944,10 +1185,10 @@ August</textarea>
       }
     }
     
-    // Show/hide bank indicator (grey B)
+    // Show/hide bank indicator (grey B) - only if not manual
     const bankIndicator = document.getElementById('bankIndicator');
     if (bankIndicator) {
-      if (fromBank) {
+      if (fromBank && !isManual) {
         bankIndicator.style.display = 'flex';
         bankIndicator.title = 'Question from offline bank';
       } else {
@@ -958,7 +1199,7 @@ August</textarea>
     
     if(!text || text.replace(/\s+/g,'').length<2){
       console.log('Question too short, using fallback');
-      const grade=load('mxq_grade','2'), subject=load('mxq_subject','General'), blooms=load('mxq_blooms','Evaluate');
+      const grade=load('mxq_grade',''), subject=load('mxq_subject',''), blooms=load('mxq_blooms','');
       const verbMap={Remember:'show what you know',Understand:'explain your thinking',Apply:'use your skills',Analyze:'compare or find a pattern',Evaluate:'choose and justify',Create:'plan or design'};
       const verb=verbMap[blooms]||'explain your thinking';
       text = subject!=='General'?`How will you ${verb} in ${subject} today?`:`What is one smart way you can ${verb} today?`;
@@ -970,6 +1211,7 @@ August</textarea>
     }
     
     console.log('About to render question:', text);
+    console.log('Calling renderQuestionForce with text:', text);
     renderQuestionForce(text).then(() => {
       console.log('Question rendering complete');
       updateQDebug();
@@ -985,6 +1227,8 @@ August</textarea>
         qInput.value = text;
         console.log('Updated qInput field with:', text);
       }
+    }).catch(error => {
+      console.error('Error in renderQuestionForce:', error);
     });
   }
   // If anything empties the question, restore it
@@ -998,6 +1242,75 @@ August</textarea>
     }
   });
   mo.observe(document.body,{subtree:true,childList:true,characterData:true});
+  
+  // Add event listeners to detect manual question editing
+  document.addEventListener('DOMContentLoaded', () => {
+    const qInput = document.getElementById('qInput');
+    if (qInput) {
+      // Detect when user manually types in the question field
+      qInput.addEventListener('input', () => {
+        const typedQuestion = qInput.value.trim();
+        const currentQuestion = $('#question')?.textContent?.trim() || '';
+        
+        // If the typed question is different from current and not empty, show manual indicator
+        if (typedQuestion !== currentQuestion && typedQuestion.length > 0) {
+          // Show manual indicator temporarily while typing
+          const manualIndicator = document.getElementById('manualIndicator');
+          if (manualIndicator) {
+            manualIndicator.style.display = 'flex';
+            manualIndicator.title = 'Manual question (typing...)';
+          }
+          
+          // Hide other indicators while manually editing
+          const aiIndicator = document.getElementById('aiIndicator');
+          const bankIndicator = document.getElementById('bankIndicator');
+          if (aiIndicator) aiIndicator.style.display = 'none';
+          if (bankIndicator) bankIndicator.style.display = 'none';
+        }
+      });
+      
+      // When user finishes editing (blur event), update the question if it's different
+      qInput.addEventListener('blur', () => {
+        const typedQuestion = qInput.value.trim();
+        const currentQuestion = $('#question')?.textContent?.trim() || '';
+        
+        if (typedQuestion !== currentQuestion && typedQuestion.length > 0) {
+          console.log('Manual question detected, updating...');
+          setQuestionSafe(typedQuestion, false, false, true);
+        }
+      });
+    }
+    
+    // Add event listeners to detect manual choice editing
+    ['a1', 'a2', 'a3', 'a4'].forEach(id => {
+      const choiceInput = document.getElementById(id);
+      if (choiceInput) {
+        choiceInput.addEventListener('input', () => {
+          // If any choice is manually edited, show manual indicator
+          const manualIndicator = document.getElementById('manualIndicator');
+          if (manualIndicator) {
+            manualIndicator.style.display = 'flex';
+            manualIndicator.title = 'Manual choices (editing...)';
+          }
+          
+          // Hide other indicators while manually editing
+          const aiIndicator = document.getElementById('aiIndicator');
+          const bankIndicator = document.getElementById('bankIndicator');
+          if (aiIndicator) aiIndicator.style.display = 'none';
+          if (bankIndicator) bankIndicator.style.display = 'none';
+        });
+        
+        // When user finishes editing choices, mark as manual
+        choiceInput.addEventListener('blur', () => {
+          const currentQuestion = $('#question')?.textContent?.trim() || '';
+          if (currentQuestion) {
+            // Mark the current question as manual since choices were edited
+            setQuestionSafe(currentQuestion, false, false, true);
+          }
+        });
+      }
+    });
+  });
 
   // ---------- zones / choices ----------
   function setCols(n){$('#zones').style.gridTemplateColumns=`repeat(${n},minmax(0,1fr))`}
@@ -1087,6 +1400,34 @@ August</textarea>
       t.dataset.lastY = t.style.top;
       t.classList.add('inParking');
     }
+    
+    // Ensure all badges are accessible and properly positioned
+    badges.forEach(b => {
+      if (b.dataset.zone === 'parking') {
+        // Reset any problematic styles that might interfere with interaction
+        b.style.pointerEvents = 'auto';
+        b.style.opacity = '1';
+        b.style.visibility = 'visible';
+        b.style.zIndex = '1';
+        
+        // Ensure the badge is within the visible area
+        const rect = b.getBoundingClientRect();
+        const stageRect = $('#stage').getBoundingClientRect();
+        
+        // If badge is outside the stage area, reposition it
+        if (rect.right < stageRect.left || rect.left > stageRect.right || 
+            rect.bottom < stageRect.top || rect.top > stageRect.bottom) {
+          // Reposition to a safe location within the parking area
+          const safeX = Math.max(stageRect.left + 20, Math.min(stageRect.right - 160, parseInt(b.style.left) || 0));
+          const safeY = Math.max(stageRect.top + 20, Math.min(stageRect.bottom - 84, parseInt(b.style.top) || 0));
+          
+          b.style.left = safeX + 'px';
+          b.style.top = safeY + 'px';
+          b.dataset.lastX = b.style.left;
+          b.dataset.lastY = b.style.top;
+        }
+      }
+    });
   }
   function makeBadges(){
     $('#badgeLayer').innerHTML=''; badges=[];
@@ -1096,6 +1437,12 @@ August</textarea>
       const col=i%g.cols,row=Math.floor(i/g.cols);
       el.style.left=(g.left0+col*140)+'px'; el.style.top=(g.top0+row*64)+'px';
       el.dataset.zone='parking'; el.dataset.lastX=el.style.left; el.dataset.lastY=el.style.top;
+      // Ensure the badge is accessible
+      el.style.pointerEvents = 'auto';
+      el.style.cursor = 'grab';
+      el.style.opacity = '1';
+      el.style.visibility = 'visible';
+      
       $('#badgeLayer').appendChild(el); enableDrag(el); badges.push(el); i++;
     });
     i++;
@@ -1107,6 +1454,10 @@ August</textarea>
     stats();
   }
   function enableDrag(el){
+    // Ensure the element is always draggable
+    el.style.pointerEvents = 'auto';
+    el.style.cursor = 'grab';
+    
     el.addEventListener('pointerdown', e => {
       e.preventDefault();
       el.setPointerCapture(e.pointerId);
@@ -1116,7 +1467,11 @@ August</textarea>
         dx: e.clientX - r.left,
         dy: e.clientY - r.top
       });
-      el.style.zIndex = Date.now();
+      
+      // Bring this badge to the top layer when starting to drag
+      const maxZIndex = Math.max(...badges.map(b => parseInt(b.style.zIndex) || 1));
+      el.style.zIndex = maxZIndex + 1;
+      el.style.cursor = 'grabbing';
     }, { passive: false });
 
     el.addEventListener('pointermove', e => {
@@ -1216,6 +1571,11 @@ August</textarea>
           el.dataset.zone='parking';
           el.dataset.lastX=el.style.left; el.dataset.lastY=el.style.top;
           el.classList.add('inParking');
+          
+          // Ensure this badge stays on top since it was just moved
+          const maxZIndex = Math.max(...badges.map(b => parseInt(b.style.zIndex) || 1));
+          el.style.zIndex = maxZIndex + 1;
+          
           landed=true; break;
         }
       }else if(t.id==='partnerArea' || t.id==='helpArea'){
@@ -1236,7 +1596,11 @@ August</textarea>
           el.dataset.zone = t.id === 'partnerArea' ? 'partner' : 'help';
           el.dataset.lastX=el.style.left; el.dataset.lastY=el.style.top;
           el.classList.remove('inParking');
-          el.style.zIndex = Date.now();
+          
+          // Ensure this badge stays on top since it was just moved
+          const maxZIndex = Math.max(...badges.map(b => parseInt(b.style.zIndex) || 1));
+          el.style.zIndex = maxZIndex + 1;
+          
           landed=true; break;
         }
       }else{
@@ -1256,7 +1620,11 @@ August</textarea>
           el.dataset.zone = t.dataset.zone;
           el.dataset.lastX=el.style.left; el.dataset.lastY=el.style.top;
           el.classList.remove('inParking');
-          el.style.zIndex = Date.now();
+          
+          // Ensure this badge stays on top since it was just moved
+          const maxZIndex = Math.max(...badges.map(b => parseInt(b.style.zIndex) || 1));
+          el.style.zIndex = maxZIndex + 1;
+          
           landed=true; break;
         }
       }
@@ -1266,7 +1634,10 @@ August</textarea>
     if(!landed){
       // Keep the badge where it was dropped, just update its last position
       el.dataset.lastX=el.style.left; el.dataset.lastY=el.style.top;
-      el.style.zIndex = Date.now();
+      
+      // Ensure this badge stays on top since it was just moved
+      const maxZIndex = Math.max(...badges.map(b => parseInt(b.style.zIndex) || 1));
+      el.style.zIndex = maxZIndex + 1;
     }
     stats();
   }
@@ -1568,7 +1939,7 @@ August</textarea>
         ],
         g3_4: [
           "ignoring distractions",
-          "self-talk to follow multi-step directions",
+          "self-talk: multi-step direction",
           "goal steps and feedback",
           "asking for help"
         ],
@@ -1675,23 +2046,38 @@ August</textarea>
 
   // Helper functions for Ontario prompt builder
   function getFiltersFromDOM() {
+    const gradeValue = document.getElementById('gradeInput')?.value;
+    const subjectValue = document.getElementById('subjectInput')?.value;
+    const bloomsValue = document.getElementById('bloomsInput')?.value;
+    const learningSkillValue = document.getElementById('lsInput')?.value;
+    const selValue = document.getElementById('selInput')?.value;
+    
     return {
-      grade: document.getElementById('gradeInput')?.value || "2",
-      subject: document.getElementById('subjectInput')?.value || "General",
-      blooms: document.getElementById('bloomsInput')?.value || "Evaluate",
-      learningSkill: document.getElementById('lsInput')?.value || "General",
-      sel: document.getElementById('selInput')?.value || "",
+      grade: gradeValue === "-" ? "" : (gradeValue || ""),
+      subject: subjectValue === "-" ? "" : (subjectValue || ""),
+      blooms: bloomsValue === "-" ? "" : (bloomsValue || ""),
+      learningSkill: learningSkillValue === "-" ? "" : (learningSkillValue || ""),
+      sel: selValue === "-" ? "" : (selValue || ""),
       keywords: (document.getElementById('keywordInput')?.value || "").trim(),
       concise: !!document.getElementById('conciseToggle')?.checked
     };
   }
 
   function pickBloomsVerb(level) {
+    if (!level || level === "-") {
+      // Return a random verb from any level when no specific level is selected
+      const allVerbs = Object.values(BLOOMS_VERBS).flat();
+      return allVerbs[Math.floor(Math.random() * allVerbs.length)];
+    }
     const list = BLOOMS_VERBS[level] || BLOOMS_VERBS["Understand"];
     return list[Math.floor(Math.random()*list.length)];
   }
 
   function pickSubjectStrand(subject) {
+    if (!subject || subject === "-") {
+      // Return cross-curricular when no specific subject is selected
+      return {name: "Cross-Curricular", topic: ""};
+    }
     const s = ONTARIO.subjects[subject]?.strands || ONTARIO.subjects["General"].strands;
     const keys = Object.keys(s);
     if (!keys.length) return {name:"Cross-Curricular", topic:""};
@@ -1702,22 +2088,28 @@ August</textarea>
   }
 
   function selBandForGrade(gradeStr) {
-    const g = parseInt(String(gradeStr || "3"), 10);
+    if (!gradeStr || gradeStr === "-") {
+      // Default to middle grade band when no specific grade is selected
+      return "g3_4";
+    }
+    const g = parseInt(String(gradeStr), 10);
     if (g <= 2) return "g1_2";
     if (g <= 4) return "g3_4";
     return "g5_6";
   }
 
   function getSelNudge(selValue) {
-    if (!selValue) return "";
+    if (!selValue || selValue === "-") return "";
     const [domain] = selValue.split(" — ");
     const nudge = SEL_TOPICS.domains[domain]?.promptNudge || "";
     return `SEL focus: ${selValue}. ${nudge}`;
   }
 
   function populateSELDropDown() {
-    const grade = document.getElementById('gradeInput')?.value || "3";
-    const band = selBandForGrade(grade);
+    const grade = document.getElementById('gradeInput')?.value;
+    // If grade is "-", use a default grade for SEL band calculation
+    const gradeForBand = (grade === "-" || !grade) ? "3" : grade;
+    const band = selBandForGrade(gradeForBand);
     const sel = document.getElementById('selInput');
     if (!sel) return;
 
@@ -1749,9 +2141,15 @@ August</textarea>
    */
   function buildOntarioPrompt() {
     const f = getFiltersFromDOM();
-    const verb = pickBloomsVerb(f.blooms);
-    const {name: strand, topic} = pickSubjectStrand(f.subject);
-    const lsLine = f.learningSkill !== "General" ? LEARNING_SKILL_NUDGES[f.learningSkill] : "";
+    
+    // Handle empty filter values (when "-" is selected)
+    const gradeText = f.grade ? `for Grade ${f.grade}` : "for any grade level";
+    const subjectText = f.subject ? `aligned to Ontario ${f.subject}` : "aligned to any Ontario subject";
+    const bloomsText = f.blooms ? `Bloom's "${f.blooms}"` : "any cognitive level";
+    const verb = f.blooms ? pickBloomsVerb(f.blooms) : "explain your thinking";
+    const strandInfo = f.subject ? pickSubjectStrand(f.subject) : {name: "Cross-Curricular", topic: ""};
+    const {name: strand, topic} = strandInfo;
+    const lsLine = f.learningSkill ? LEARNING_SKILL_NUDGES[f.learningSkill] : "";
     const keyLine = f.keywords ? `CRITICAL: The question MUST focus primarily on this keyword: ${f.keywords}. Do NOT mix it with unrelated concepts from previous questions. The question should be directly about ${f.keywords} and make logical sense.` : "";
     const selLine = getSelNudge(f.sel);
     const lengthRule = f.concise
@@ -1761,18 +2159,19 @@ August</textarea>
     // A friendly, Ontario-aligned "system" style prompt for question generation
     const prompt = `
 You are a helpful Ontario elementary teacher assistant.
-Create ONE student-facing question aligned to Ontario ${f.subject} (Grades 1–6), for Grade ${f.grade}, strand: ${strand}${topic?` (topic: ${topic})`:""}.
-Cognitive demand: Bloom's "${f.blooms}" — use a student-friendly verb like "${verb}".
+Create ONE student-facing question ${subjectText} (Grades 1–6), ${gradeText}, strand: ${strand}${topic?` (topic: ${topic})`:""}.
+Cognitive demand: ${bloomsText} — use a student-friendly verb like "${verb}".
 ${keyLine}
 ${selLine}
 Constraints:
-- Match Grade ${f.grade} reading level; use simple sentences and familiar vocabulary.
+- ${f.grade ? `Match Grade ${f.grade}` : 'Use age-appropriate'} reading level; use simple sentences and familiar vocabulary.
 - Include any necessary everyday contexts culturally respectful to diverse Ontario classrooms.
 - ${lengthRule}
 - If the response mode is multiple-choice (your app handles this), ensure all options are plausible and only one is clearly best.
 - Add a short "success criterion" in teacher voice: "I can …" (one line).
 - CRITICAL: Do NOT include answer choices (A, B, C, D) in the question text. The question should be a standalone prompt without any multiple choice options listed.
 - Keep questions short and direct - focus on the core prompt without extra explanation.
+- Do NOT reference previous lessons or activities (e.g., "continue your poster", "after the play we saw").
 
 Learning Skills link: ${lsLine || "Optionally include a reflective mini-prompt about learning skills if it fits naturally."}
 
@@ -1856,7 +2255,7 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     }
     
     // 4. Check if keywords are being used (if keywords were specified)
-    const savedKeywords = load('mxq_keywords', '');
+    const savedKeywords = load('mxq_keywords_active', '');
     if (savedKeywords && savedKeywords.trim()) {
       const keywordList = savedKeywords.toLowerCase().split(/[,\s]+/).filter(k => k.length > 2);
       const questionAndChoices = (question + ' ' + choices.join(' ')).toLowerCase();
@@ -1920,6 +2319,34 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
       }
     }
     
+    // 4e. Disallow references that assume prior work or events
+    const assumePatterns = [
+      /\b(yesterday|last\s+(?:week|lesson|class))\b/i,
+      /\b(the\s+(?:play|experiment|field\s*trip)\s+we\s+(?:did|saw|finished))\b/i,
+      /\b(continue|finish|complete|build\s+on|add\s+to)\s+(?:your|the)\b/i
+    ];
+    if(assumePatterns.some(p=>p.test(question))) {
+      issues.push("Question assumes prior activity/session");
+    }
+    
+    // 4f. Ensure question does not contain answer choices
+    const choiceLike = /\b(?:A\)|B\)|C\)|D\))|(?:Option\s+[ABCD])\b/i;
+    if(choiceLike.test(question)) {
+      issues.push("Question text includes answer choices");
+    }
+    
+    // 4g. Ensure choice count matches response mode
+    const expectedCount = (()=> {
+      const saved = load('mxq_choices')||{};
+      const modeSel = saved.mode || '4';
+      if(modeSel==='open') return 1;
+      if(modeSel==='wyr')  return 2;
+      return parseInt(modeSel,10)||4;
+    })();
+    if(Array.isArray(choices) && choices.length !== expectedCount && expectedCount !== 1){
+      issues.push(`Choices length ${choices.length} does not match expected ${expectedCount}`);
+    }
+    
     // 5. Choices should be distinct and meaningful
     if (choices.length !== new Set(choices).size) {
       issues.push("Choices are not unique");
@@ -1958,8 +2385,11 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     let question = obj.question.trim();
     let choices = obj.choices.map(c => c.trim()).filter(Boolean);
     
-    // 0. Check if keywords are missing and try to incorporate them
-    const savedKeywords = load('mxq_keywords', '');
+    // 0. Strip any embedded choices from question like "A) ..., B) ..."
+    question = question.replace(/\b(?:A\)|B\)|C\)|D\))\s*[^?]*\??/gi,'').trim();
+    
+    // 0a. Check if keywords are missing and try to incorporate them
+    const savedKeywords = load('mxq_keywords_active', '');
     if (savedKeywords && savedKeywords.trim()) {
       const keywordList = savedKeywords.toLowerCase().split(/[,\s]+/).filter(k => k.length > 2);
       const questionAndChoices = (question + ' ' + choices.join(' ')).toLowerCase();
@@ -1986,6 +2416,44 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
         }
       }
     }
+    
+    // 0b. Remove prior-activity assumptions
+    question = question
+      .replace(/\b(?:yesterday|last\s+(?:week|lesson|class))\b.*?\?/i, '?')
+      .replace(/\bthe\s+(?:play|experiment|field\s*trip)\s+we\s+(?:did|saw|finished)\b.*?\?/i, '?')
+      .replace(/\b(?:continue|finish|complete|build\s+on|add\s+to)\s+(?:your|the)\b.*?\?/i, '?')
+      .replace(/\s+/g,' ').replace(/\s\?/g,'?').trim();
+    
+    // 0c. Enforce "simple yet deep" phrasing: prefer short, direct stems
+    if(question.split(' ').length > 15){
+      // keep first ~14–15 words, end cleanly
+      const trimmed = question.replace(/\s+/g,' ').split(' ').slice(0,15).join(' ');
+      question = /[?.!]$/.test(trimmed) ? trimmed : (trimmed + '?');
+    }
+    
+    // 0d. Ensure choices match mode
+    const saved = load('mxq_choices')||{};
+    const modeSel = saved.mode || '4';
+    const need = (modeSel==='open') ? 1 : (modeSel==='wyr' ? 2 : parseInt(modeSel,10)||4);
+    if(need === 1){
+      choices = ['📝 Your response']; // open response placeholder
+    } else {
+      // de-dup, keep concise, ensure "📝 Other (explain)" is present for 3/4
+      choices = Array.from(new Set(choices.map(c=>c.replace(/\s+/g,' ').trim()).filter(Boolean)));
+      if((need===3 || need===4) && !choices.some(c=>/^📝\s*Other/i.test(c))){
+        choices = choices.slice(0, need-1).concat(['📝 Other (explain)']);
+      }
+      if(choices.length !== need){
+        // pad with generic but age-appropriate frames
+        const pads = ['Try a different way','Ask a partner','Use a tool','Check an example'];
+        while(choices.length < need) choices.push(pads[choices.length % pads.length]);
+        choices = choices.slice(0,need);
+      }
+    }
+    
+    // 0e. Final clean-up for age-appropriateness (remove complex academic words)
+    const tooComplex = /\b(?:notwithstanding|furthermore|consequently|subsequently|hypothesis|methodology|quantitative|qualitative)\b/ig;
+    question = question.replace(tooComplex,'').replace(/\s+/g,' ').replace(/\s\?/,'?').trim();
     
     // 1. Fix questions that reference previous activities
     const repairPatterns = [
@@ -2391,77 +2859,463 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     }
   }
   
-  function offlineQ(count,subject,ls,concise){
-    // Enhanced offline questions that are more robust and standalone
-    const qs={
-      General:[
-        'What is one way you can help our class learn well today? Explain your choice.',
-        'How can you show your thinking clearly? Explain your choice.',
-        'What strategy will you use to stay focused during our work time?',
-        'How can you be a good learning partner today?'
+  // Comprehensive offline question bank with usage tracking
+  function offlineQ(count, subject, ls, concise) {
+    // Get or initialize the used questions tracking
+    let usedQuestions = JSON.parse(localStorage.getItem('mxq_used_questions') || '{}');
+    
+    // Define the comprehensive question bank
+    const questionBank = {
+      open: [
+        'What is something kind you can do for a friend today?',
+        'How do you show respect to your teacher?',
+        'What do you do when a task feels too hard?',
+        'What is one thing that makes you feel proud of yourself?',
+        'How can you help someone who is feeling sad?',
+        'What makes a person a good friend?',
+        'How can you make our classroom a better place?',
+        'What do you do when you make a mistake?',
+        'What is something new you want to learn this week?',
+        'How can you show honesty in school?',
+        'What helps you calm down when you feel upset?',
+        'What do you do when you feel nervous about something?',
+        'What is your favorite way to share ideas with others?',
+        'What is something that makes learning fun for you?',
+        'How can you show fairness during a game?',
+        'What is something you can teach to another student?',
+        'How do you show that you are a good listener?',
+        'What is one way you can be a leader in class?',
+        'What makes you feel safe at school?',
+        'What is one question you are curious about today?',
+        'How do you know when you should ask for help?',
+        'What makes you laugh the most?',
+        'How do you take care of your body every day?',
+        'What is one way you can make someone feel welcome?',
+        'What is your favorite part of the school day?',
+        'How do you celebrate when you achieve a goal?',
+        'What is something you want to get better at?',
+        'What do you do when you feel stuck on a problem?',
+        'How do you encourage a classmate who is trying hard?',
+        'What is one thing you are thankful for?',
+        'How can you show responsibility in the classroom?',
+        'What makes you feel included in a group?',
+        'What is one goal you have for yourself this month?',
+        'How do you take care of the classroom materials?',
+        'What makes you excited to learn?',
+        'What is one way to show teamwork in sports?',
+        'How do you show respect to your family?',
+        'What is your favorite way to solve problems?',
+        'What makes you feel calm inside?',
+        'How do you show kindness without using words?',
+        'What is something you learned this week?',
+        'What is one rule that is important to follow?',
+        'How do you help someone who is new to school?',
+        'What makes you different in a good way?',
+        'What is something you wonder about the world?',
+        'How do you show that you are ready to learn?',
+        'What is one way you can improve as a student?',
+        'What is something you enjoy doing with your friends?',
+        'How do you know when you are being fair?',
+        'What is something you can do to make tomorrow a good day?'
       ],
-      Responsibility:[
-        'How can you show responsibility during our work time? Explain.',
-        'What does being responsible look like in our classroom?',
-        'How can you take care of our learning materials today?'
+      '2': [
+        'Is it better to work by yourself or with a partner?',
+        'Do you prefer asking questions or answering them?',
+        'Is it easier to start a project or finish it?',
+        'Do you like playing outside more than playing inside?',
+        'Is it better to be fast or to be careful?',
+        'Do you prefer reading books or listening to stories?',
+        'Is it easier to tell the truth or to tell a story?',
+        'Do you like helping others more than being helped?',
+        'Is it better to lead a group or to follow directions?',
+        'Do you prefer writing with a pencil or drawing with crayons?',
+        'Is it better to try again or to give up?',
+        'Do you like math more than reading?',
+        'Is it easier to plan what to do or to do it right away?',
+        'Do you prefer listening quietly or talking with friends?',
+        'Is it better to share first or to wait your turn?',
+        'Do you like solving puzzles more than telling stories?',
+        'Is it easier to be brave or to be kind?',
+        'Do you prefer working in the morning or in the afternoon?',
+        'Is it better to listen to instructions or to figure things out yourself?',
+        'Do you like numbers more than letters?',
+        'Is it easier to imagine new things or to remember old ones?',
+        'Do you prefer helping a friend or asking a friend for help?',
+        'Is it better to be fair or to be first in line?',
+        'Do you like games more than reading?',
+        'Is it easier to stay quiet or to keep moving?',
+        'Do you prefer making choices or having someone decide for you?',
+        'Is it better to be quick or to be thoughtful?',
+        'Do you like drawing pictures more than writing sentences?',
+        'Is it easier to follow rules or to make rules?',
+        'Do you prefer learning indoors or outdoors?',
+        'Is it better to play in a group or to play alone?',
+        'Do you like working on art more than working on science?',
+        'Is it easier to be a leader or a helper?',
+        'Do you prefer building something new or fixing something broken?',
+        'Is it better to tell a joke or to hear a joke?',
+        'Do you like telling stories more than listening to them?',
+        'Is it easier to think quietly or to share your ideas aloud?',
+        'Do you prefer playing soccer or basketball?',
+        'Is it better to keep trying or to take a break?',
+        'Do you like morning recess more than afternoon recess?',
+        'Is it easier to start homework or to finish it?',
+        'Do you prefer learning with a partner or with a group?',
+        'Is it better to work quietly or with music?',
+        'Do you like science more than art?',
+        'Is it easier to give advice or to take advice?',
+        'Do you prefer reading facts or reading stories?',
+        'Is it better to listen first or to talk first?',
+        'Do you like using computers more than using books?',
+        'Is it easier to play by the rules or to make up new ones?',
+        'Do you prefer learning by reading or by doing?'
       ],
-      Organization:[
-        'What can you do to stay organized for this task? Explain your choice.',
-        'How will you keep track of your ideas and work today?',
-        'What tools or strategies help you stay organized?'
+      '3': [
+        'What is the best way to calm down?',
+        'How can you solve a problem with a friend?',
+        'What helps you learn best?',
+        'What do you do when you make a mistake?',
+        'What is the most important part of being a good friend?',
+        'How can you show respect?',
+        'What helps you focus in class?',
+        'What is the best way to celebrate success?',
+        'How do you show responsibility?',
+        'What makes a team strong?',
+        'What helps you feel safe?',
+        'What is the best way to show honesty?',
+        'What helps you get ready for school?',
+        'How do you share with others?',
+        'What makes you feel proud?',
+        'What helps you calm down?',
+        'What is the best way to be fair?',
+        'What helps you remember?',
+        'What is the best way to welcome someone new?',
+        'What helps you when you feel sad?',
+        'How do you show teamwork?',
+        'What helps you grow as a learner?',
+        'What is the best way to be safe outside?',
+        'What helps you solve math problems?',
+        'How do you care for nature?',
+        'What helps you be creative?',
+        'How do you show kindness?',
+        'What helps you learn reading?',
+        'How do you show fairness?',
+        'What is the best way to learn more?',
+        'How do you solve puzzles?',
+        'What makes learning fun?',
+        'How do you show care for family?',
+        'What helps you when you feel stuck?',
+        'What helps you feel proud of your work?',
+        'How do you show honesty at home?',
+        'What helps you stay calm?',
+        'How do you show respect to nature?',
+        'What makes you laugh the most?',
+        'How do you celebrate your learning?',
+        'What helps you do your best?',
+        'What is the best way to stay healthy?',
+        'How do you show teamwork in sports?',
+        'What helps you understand stories?',
+        'How do you show you are a good listener?',
+        'What helps you be safe on the playground?',
+        'How do you show respect at school?',
+        'What makes you excited to learn?',
+        'How do you encourage others?',
+        'What helps you when you feel nervous?'
       ],
-      'Independent Work':[
-        'What helps you stay focused when working on your own? Explain.',
-        'How do you know when you need help with a task?',
-        'What do you do to check your work when you finish?'
+      '4': [
+        'What helps you calm down when you feel upset?',
+        'How can you show respect to your classmates?',
+        'What makes a team work well together?',
+        'What helps you do your best work?',
+        'How can you show honesty at school?',
+        'What helps you remember something new?',
+        'How do you show responsibility in class?',
+        'What makes you proud of yourself?',
+        'What helps you learn to read?',
+        'How can you show kindness every day?',
+        'What helps you solve a problem?',
+        'What makes learning fun?',
+        'How can you show respect at home?',
+        'What helps you stay safe outside?',
+        'How do you show teamwork in sports?',
+        'What helps you when you feel nervous?',
+        'How can you care for nature?',
+        'What makes you a good friend?',
+        'What helps you relax after school?',
+        'How can you show fairness on the playground?',
+        'What makes you laugh the most?',
+        'How do you get ready for school?',
+        'What helps you learn more about the world?',
+        'How can you show care for a new student?',
+        'What makes you feel calm?',
+        'How can you celebrate your hard work?',
+        'What helps you stay healthy?',
+        'How do you show respect to teachers?',
+        'What helps you keep trying when it is hard?',
+        'How do you show kindness on the playground?',
+        'What makes you feel safe at school?',
+        'What helps you learn in math?',
+        'How do you care for classroom materials?',
+        'What makes you excited to learn?',
+        'How can you be a good leader?',
+        'What helps you when you feel sad?',
+        'How do you show respect for nature?',
+        'What makes a school day great?',
+        'How can you show honesty with your friends?',
+        'What helps you be ready to learn?',
+        'How do you show teamwork in class?',
+        'What makes you feel included in a group?',
+        'How can you show respect during a story?',
+        'What helps you solve puzzles?',
+        'How do you show kindness at home?',
+        'What makes you happy at school?',
+        'How do you care for yourself?',
+        'What helps you stay focused during work?',
+        'How can you show respect on a trip?',
+        'What makes you feel proud in school?'
       ],
-      Collaboration:[
-        'What makes group work go well? Explain your choice.',
-        'How can you help your partner or group succeed today?',
-        'What does good teamwork look like in our classroom?'
-      ],
-      Initiative:[
-        'What is a way you can take initiative in your learning today? Explain.',
-        'How can you go beyond what is expected in this task?',
-        'What new idea or approach would you like to try today?'
-      ],
-      'Self-Regulation':[
-        'What will you do if you feel stuck or upset during learning? Explain.',
-        'How can you manage your energy and focus today?',
-        'What strategies help you stay calm when things are challenging?'
+      wyr: [
+        'Would you rather fly like a bird or swim like a fish?',
+        'Would you rather live in a treehouse or in a castle?',
+        'Would you rather read a storybook or write your own story?',
+        'Would you rather play indoors on a rainy day or play outdoors in the sunshine?',
+        'Would you rather be really tall or really small?',
+        'Would you rather have a pet dog or a pet cat?',
+        'Would you rather always be warm or always be cool?',
+        'Would you rather be able to draw beautifully or sing beautifully?',
+        'Would you rather ride a bicycle or ride a scooter?',
+        'Would you rather have super speed or super strength?',
+        'Would you rather visit the ocean or visit the mountains?',
+        'Would you rather eat ice cream or eat cake?',
+        'Would you rather play a game you always win or play a game that is always fun?',
+        'Would you rather be invisible or be able to fly?',
+        'Would you rather have a robot helper or a pet dinosaur?',
+        'Would you rather watch a movie or play a board game?',
+        'Would you rather read in the morning or read at night?',
+        'Would you rather be really good at math or really good at reading?',
+        'Would you rather travel to the past or travel to the future?',
+        'Would you rather have lots of toys or lots of books?',
+        'Would you rather live in outer space or live under the sea?',
+        'Would you rather be the teacher for a day or be the student for a day?',
+        'Would you rather eat pizza or eat spaghetti?',
+        'Would you rather talk to animals or talk to plants?',
+        'Would you rather have ten friends or one best friend?',
+        'Would you rather play soccer or play basketball?',
+        'Would you rather be able to run very fast or jump very high?',
+        'Would you rather go camping or stay in a hotel?',
+        'Would you rather play in the snow or play at the beach?',
+        'Would you rather be able to speak another language or play a musical instrument?',
+        'Would you rather spend a day drawing or spend a day building?',
+        'Would you rather have a picnic in the park or a party indoors?',
+        'Would you rather explore a forest or explore a city?',
+        'Would you rather have pancakes for breakfast or cereal for breakfast?',
+        'Would you rather read about animals or read about space?',
+        'Would you rather be famous for writing a book or for inventing something?',
+        'Would you rather swim in a pool or swim in a lake?',
+        'Would you rather live where it is always summer or always winter?',
+        'Would you rather eat only fruits or only vegetables for a week?',
+        'Would you rather build a sandcastle or build a snowman?',
+        'Would you rather climb a tall tree or dig a deep hole?',
+        'Would you rather ride a horse or ride a train?',
+        'Would you rather play a video game or play tag outside?',
+        'Would you rather always have to whisper or always have to shout?',
+        'Would you rather have a magic backpack or magic shoes?',
+        'Would you rather live in a house made of candy or a house made of Lego bricks?',
+        'Would you rather be able to breathe underwater or see in the dark?',
+        'Would you rather always have to hop or always have to skip?',
+        'Would you rather discover a new animal or discover a new planet?',
+        'Would you rather spend a whole day reading or a whole day playing outside?'
       ]
     };
     
-    // Select a question based on learning skill
-    let q = (qs[ls] || qs.General)[Math.floor(Math.random() * (qs[ls] || qs.General).length)];
-    
-    // Enhanced subject-specific choices that are more robust
-    const base={
-      General:['Use a model or example','Ask a thoughtful question','Explain with details','Other (explain)'],
-      Math:['Estimate first, then calculate','Look for patterns or relationships','Draw a picture or model','Other (explain)'],
-      Language:['Use specific details from the text','Connect to your own experiences','Ask a question to understand better','Other (explain)'],
-      Science:['Make careful observations','Make a prediction with reasoning','Test your idea safely','Other (explain)'],
-      'Social Studies':['Consider different viewpoints','Use maps, timelines, or charts','Connect to our community','Other (explain)']
+    // Define response choices for each question type
+    const responseChoices = {
+      open: ['🗣️ I\'ve got my answer and I\'m ready to explain it.'],
+      '2': ['Option A', 'Option B'],
+      '3': ['Take deep breaths', 'Talk to someone', 'Count slowly'],
+      '4': ['Take deep breaths', 'Talk to a friend', 'Draw a picture', 'Go for a walk'],
+      wyr: ['Option A', 'Option B']
     };
     
-    const list = (base[subject] || base.General).slice(0, count >= 4 ? 4 : count);
+    // Define specific question-response pairs for better matching
+    const questionResponsePairs = {
+      'What is the best way to calm down?': ['Take deep breaths', 'Talk to someone', 'Count slowly'],
+      'How can you solve a problem with a friend?': ['Talk about it', 'Ask an adult', 'Take a break'],
+      'What helps you learn best?': ['Reading', 'Doing', 'Listening'],
+      'What do you do when you make a mistake?': ['Try again', 'Ask for help', 'Learn from it'],
+      'What is the most important part of being a good friend?': ['Sharing', 'Helping', 'Listening'],
+      'How can you show respect?': ['Take turns', 'Listen quietly', 'Use kind words'],
+      'What helps you focus in class?': ['Sitting quietly', 'Using tools', 'Working with a partner'],
+      'What is the best way to celebrate success?': ['Cheer', 'Tell someone', 'Draw a picture'],
+      'How do you show responsibility?': ['Clean up', 'Finish work', 'Follow rules'],
+      'What makes a team strong?': ['Helping', 'Listening', 'Sharing'],
+      'What helps you feel safe?': ['Following rules', 'Talking to an adult', 'Playing with friends'],
+      'What is the best way to show honesty?': ['Tell the truth', 'Return lost things', 'Admit mistakes'],
+      'What helps you get ready for school?': ['Pack your bag', 'Eat breakfast', 'Get sleep'],
+      'How do you share with others?': ['Toys', 'Ideas', 'Time'],
+      'What makes you feel proud?': ['Working hard', 'Helping others', 'Being kind'],
+      'What is the best way to be fair?': ['Take turns', 'Listen to others', 'Share equally'],
+      'What helps you remember?': ['Write it down', 'Repeat it', 'Act it out'],
+      'What is the best way to welcome someone new?': ['Smile', 'Invite them', 'Talk to them'],
+      'What helps you when you feel sad?': ['Talk to a friend', 'Take a break', 'Think happy thoughts'],
+      'How do you show teamwork?': ['Listen', 'Share', 'Help'],
+      'What helps you grow as a learner?': ['Practice', 'Feedback', 'Effort'],
+      'What is the best way to be safe outside?': ['Look both ways', 'Stay with friends', 'Ask an adult'],
+      'What helps you solve math problems?': ['Count', 'Draw', 'Use objects'],
+      'How do you care for nature?': ['Pick up trash', 'Plant', 'Save water'],
+      'What helps you be creative?': ['Drawing', 'Building', 'Imagining'],
+      'How do you show kindness?': ['Smile', 'Help', 'Share'],
+      'What helps you learn reading?': ['Pictures', 'Talking', 'Acting out'],
+      'How do you show fairness?': ['Take turns', 'Share', 'Listen'],
+      'What is the best way to learn more?': ['Ask questions', 'Read books', 'Talk to people'],
+      'How do you solve puzzles?': ['Try again', 'Think harder', 'Ask for help'],
+      'What makes learning fun?': ['Games', 'Stories', 'Projects'],
+      'How do you show care for family?': ['Help', 'Listen', 'Share'],
+      'What helps you when you feel stuck?': ['Ask', 'Rest', 'Try again'],
+      'What helps you feel proud of your work?': ['Effort', 'Creativity', 'Kindness'],
+      'How do you show honesty at home?': ['Tell the truth', 'Admit mistakes', 'Return things'],
+      'What helps you stay calm?': ['Breathing', 'Counting', 'Quiet time'],
+      'How do you show respect to nature?': ['Plant', 'Protect', 'Clean'],
+      'What makes you laugh the most?': ['Jokes', 'Friends', 'Stories'],
+      'How do you celebrate your learning?': ['Share with class', 'Draw', 'Tell your family'],
+      'What helps you do your best?': ['Practice', 'Encouragement', 'Effort'],
+      'What is the best way to stay healthy?': ['Eat well', 'Sleep', 'Exercise'],
+      'How do you show teamwork in sports?': ['Pass', 'Encourage', 'Take turns'],
+      'What helps you understand stories?': ['Pictures', 'Talking', 'Acting'],
+      'How do you show you are a good listener?': ['Look at speaker', 'Be quiet', 'Ask questions'],
+      'What helps you be safe on the playground?': ['Take turns', 'Follow rules', 'Watch out'],
+      'How do you show respect at school?': ['Listen', 'Help', 'Share'],
+      'What makes you excited to learn?': ['New books', 'Fun games', 'Interesting projects'],
+      'How do you encourage others?': ['Say kind words', 'Cheer', 'Offer help'],
+      'What helps you when you feel nervous?': ['Talk', 'Breathe', 'Think of good things'],
+      
+      // 4-choice question pairs
+      'What helps you calm down when you feel upset?': ['Take deep breaths', 'Talk to a friend', 'Draw a picture', 'Go for a walk'],
+      'How can you show respect to your classmates?': ['Listen carefully', 'Share materials', 'Use kind words', 'Take turns'],
+      'What makes a team work well together?': ['Helping one another', 'Listening to ideas', 'Sharing fairly', 'Encouraging each other'],
+      'What helps you do your best work?': ['Trying hard', 'Asking for help', 'Taking a short break', 'Staying focused'],
+      'How can you show honesty at school?': ['Tell the truth', 'Admit your mistakes', 'Return things that are not yours', 'Keep your promises'],
+      'What helps you remember something new?': ['Write it down', 'Say it out loud', 'Act it out', 'Draw a picture'],
+      'How do you show responsibility in class?': ['Finish your work', 'Put materials away', 'Follow the rules', 'Be on time'],
+      'What makes you proud of yourself?': ['Working hard', 'Helping someone', 'Trying again', 'Being kind'],
+      'What helps you learn to read?': ['Looking at pictures', 'Sounding out words', 'Asking questions', 'Listening to the teacher'],
+      'How can you show kindness every day?': ['Help a friend', 'Say kind words', 'Share with others', 'Smile at someone'],
+      'What helps you solve a problem?': ['Talk about it', 'Try a new way', 'Ask for help', 'Work with a partner'],
+      'What makes learning fun?': ['Playing games', 'Reading stories', 'Doing projects', 'Working with friends'],
+      'How can you show respect at home?': ['Help with chores', 'Listen to family', 'Share fairly', 'Use polite words'],
+      'What helps you stay safe outside?': ['Look both ways', 'Stay with a buddy', 'Ask an adult', 'Follow rules'],
+      'How do you show teamwork in sports?': ['Pass the ball', 'Cheer for others', 'Take turns', 'Play fairly'],
+      'How can you care for nature?': ['Recycle', 'Plant something', 'Pick up litter', 'Save water'],
+      'What makes you a good friend?': ['Listening', 'Sharing', 'Helping', 'Playing kindly'],
+      'What helps you relax after school?': ['Read a book', 'Listen to music', 'Go outside', 'Draw a picture'],
+      'How can you show fairness on the playground?': ['Take turns', 'Invite others', 'Follow rules', 'Share equipment'],
+      'What makes you laugh the most?': ['Jokes', 'Funny stories', 'Playing games', 'Being with friends'],
+      'How do you get ready for school?': ['Pack your bag', 'Eat breakfast', 'Get dressed', 'Brush your teeth'],
+      'What helps you learn more about the world?': ['Read books', 'Ask questions', 'Explore outside', 'Talk to people'],
+      'How can you show care for a new student?': ['Smile at them', 'Sit with them', 'Invite them to play', 'Ask them questions'],
+      'What makes you feel calm?': ['Quiet time', 'Drawing', 'Breathing', 'Gentle music'],
+      'How can you celebrate your hard work?': ['Tell your family', 'Show the class', 'Draw a picture', 'Clap for yourself'],
+      'What helps you stay healthy?': ['Eat healthy food', 'Get enough sleep', 'Exercise', 'Drink water'],
+      'How do you show respect to teachers?': ['Listen', 'Follow instructions', 'Say thank you', 'Ask questions politely'],
+      'What helps you keep trying when it is hard?': ['Encouragement', 'Taking a break', 'Thinking of new ideas', 'Practicing more'],
+      'How do you show kindness on the playground?': ['Share equipment', 'Play fairly', 'Invite others', 'Take turns'],
+      'What makes you feel safe at school?': ['Following rules', 'Staying with friends', 'Talking to an adult', 'Listening to directions'],
+      'What helps you learn in math?': ['Using objects', 'Drawing pictures', 'Counting carefully', 'Practicing problems'],
+      'How do you care for classroom materials?': ['Put them away', 'Share them', 'Use them carefully', 'Return them on time'],
+      'What makes you excited to learn?': ['New books', 'Fun projects', 'Games', 'Working with friends'],
+      'How can you be a good leader?': ['Listen to ideas', 'Help others', 'Make fair choices', 'Encourage the group'],
+      'What helps you when you feel sad?': ['Talk to someone', 'Take a break', 'Think of happy memories', 'Play outside'],
+      'How do you show respect for nature?': ['Do not litter', 'Protect animals', 'Plant trees', 'Recycle'],
+      'What makes a school day great?': ['Learning something new', 'Playing with friends', 'Reading a story', 'Doing art'],
+      'How can you show honesty with your friends?': ['Tell the truth', 'Admit a mistake', 'Keep a promise', 'Share your feelings'],
+      'What helps you be ready to learn?': ['Bring materials', 'Listen carefully', 'Sit quietly', 'Focus on the task'],
+      'How do you show teamwork in class?': ['Work together', 'Share ideas', 'Take turns', 'Listen to others'],
+      'What makes you feel included in a group?': ['Being invited', 'Having a role', 'Being listened to', 'Playing together'],
+      'How can you show respect during a story?': ['Sit quietly', 'Listen closely', 'Look at the reader', 'Ask questions after'],
+      'What helps you solve puzzles?': ['Try again', 'Think carefully', 'Work with someone', 'Use clues'],
+      'How do you show kindness at home?': ['Help with chores', 'Say kind words', 'Share with family', 'Listen carefully'],
+      'What makes you happy at school?': ['Friends', 'Learning', 'Playing', 'Creating'],
+      'How do you care for yourself?': ['Eat well', 'Get sleep', 'Stay active', 'Be kind to yourself'],
+      'What helps you stay focused during work?': ['Sit quietly', 'Use tools', 'Take a break', 'Set a goal'],
+      'How can you show respect on a trip?': ['Follow rules', 'Stay with the group', 'Listen carefully', 'Use polite words'],
+      'What makes you feel proud in school?': ['Trying your best', 'Helping others', 'Learning something new', 'Being kind']
+    };
+    
+    // Determine the question type based on count
+    let questionType;
+    if (count === 1) questionType = 'open';
+    else if (count === 2) questionType = '2';
+    else if (count === 3) questionType = '3';
+    else if (count === 4) questionType = '4';
+    else if (count === 'wyr') questionType = 'wyr';
+    else questionType = '4'; // Default to 4-choice questions
+    
+    // Get available questions for this type
+    let availableQuestions = questionBank[questionType] || questionBank['4'];
+    
+    // Filter out already used questions
+    let unusedQuestions = availableQuestions.filter(q => !usedQuestions[q]);
+    
+    // If all questions have been used, reset the tracking for this type
+    if (unusedQuestions.length === 0) {
+      console.log(`All ${questionType} questions have been used, resetting tracking for this type`);
+      // Remove tracking for this question type only
+      Object.keys(usedQuestions).forEach(q => {
+        if (questionBank[questionType].includes(q)) {
+          delete usedQuestions[q];
+        }
+      });
+      unusedQuestions = questionBank[questionType];
+    }
+    
+    // Select a random unused question
+    const selectedQuestion = unusedQuestions[Math.floor(Math.random() * unusedQuestions.length)];
+    
+    // Mark this question as used
+    usedQuestions[selectedQuestion] = true;
+    localStorage.setItem('mxq_used_questions', JSON.stringify(usedQuestions));
+    
+    // Get the appropriate response choices - check for specific question-response pairs first
     let choices;
     
-    if(count >= 3) {
-      choices = list.slice(0, count-1).concat('Other (explain)');
+    if (questionResponsePairs[selectedQuestion]) {
+      // Use the specific responses for this exact question
+      choices = questionResponsePairs[selectedQuestion];
+      console.log(`Using specific responses for: "${selectedQuestion}"`);
     } else {
-      choices = list.slice(0, 2);
+      // Fall back to generic responses for this question type
+      choices = responseChoices[questionType] || responseChoices['4'];
+      console.log(`Using generic responses for: "${selectedQuestion}"`);
     }
     
+    // Ensure we have the right number of choices for the requested count
+    if (questionType === '3' && choices.length > 3) {
+      choices = choices.slice(0, 3);
+    } else if (questionType === '4' && choices.length > 4) {
+      choices = choices.slice(0, 4);
+    } else if (questionType === '2' && choices.length > 2) {
+      choices = choices.slice(0, 2);
+    }
+    
+    // Apply concise mode if requested
+    if (concise) {
+      const words = selectedQuestion.split(' ');
+      if (words.length > 12) {
+        selectedQuestion = words.slice(0, 12).join(' ') + '...';
+      }
+      choices = choices.map(c => {
+        const words = c.split(' ');
+        return words.length > 5 ? words.slice(0, 5).join(' ') + '...' : c;
+      });
+    }
+    
+    // Add emojis to choices
     choices = addEmojisUnique(choices);
     
-    if(concise) {
-      q = q.split(' ').slice(0, 12).join(' ');
-      choices = choices.map(c => c.split(' ').slice(0, 5).join(' '));
-    }
+    console.log(`Selected offline question: "${selectedQuestion}" (Type: ${questionType}, Used: ${Object.keys(usedQuestions).length}/${availableQuestions.length})`);
     
     localStorage.setItem('mxq_ai_lastgen', JSON.stringify({used:'offline',questionSource:'offline',time:Date.now()}));
-    return {question: q, choices, fromBank: true};
+    return {question: selectedQuestion, choices, fromBank: true};
   }
   async function getQ(count,kw,grade,subject,ls,blooms,concise){
     try{
@@ -2507,7 +3361,7 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     const mode=s?.mode||'4'; setSelectedResponseMode(mode);
     const cur=s?.choices || Array.from(document.querySelectorAll('.zone h3')).map(h=>h.textContent);
     ['a1','a2','a3','a4'].forEach((id,i)=> $('#'+id).value=(cur[i]||'').replace(/^(\p{Emoji_Presentation}|\p{Emoji})\s*/u,'')); // allow editing text without emoji
-    $('#gradeInput').value=load('mxq_grade','2'); $('#subjectInput').value=load('mxq_subject','General'); $('#lsInput').value=load('mxq_ls','General'); $('#keywordInput').value=load('mxq_keywords',''); $('#bloomsInput').value=load('mxq_blooms','Evaluate');
+          $('#gradeInput').value=load('mxq_grade','-'); $('#subjectInput').value=load('mxq_subject','-'); $('#lsInput').value=load('mxq_ls','-'); $('#keywordInput').value=load('mxq_keywords',''); $('#bloomsInput').value=load('mxq_blooms','-');
     $('#conciseToggle').checked = !!load('mxq_concise', false);
     $('#selInput').value=load('mxq_sel','');
     toggleAnswerFields(mode); $('#settingsModal').classList.add('show'); aiStatus();
@@ -2723,7 +3577,11 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
       console.log('Selected mode:', mode);
       const q=$('#qInput').value.trim()||'Which choice fits you best right now? Explain why.';
       console.log('Question value:', q);
-      setQuestionSafe(q);
+      // Check if this is a manually typed question (different from the current displayed question)
+      const currentQuestion = $('#question').textContent.trim();
+      const isManual = q !== currentQuestion && q.length > 0;
+      console.log('Is manual question:', isManual, 'Current:', currentQuestion, 'New:', q);
+      setQuestionSafe(q, false, false, isManual);
       const lines=(mode==='open')?[]:[$('#a1').value,$('#a2').value,$('#a3').value,$('#a4').value].map(s=>s.trim()).filter(Boolean);
       console.log('Answer lines:', lines);
       applyChoices(mode,lines);
@@ -2893,17 +3751,27 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
   
   // Reset filters button
   $('#resetFiltersBtn').onclick=()=>{
-    $('#gradeInput').value='2';
-    $('#subjectInput').value='General';
-    $('#lsInput').value='General';
+    $('#gradeInput').value='-';
+    $('#subjectInput').value='-';
+    $('#lsInput').value='-';
     $('#keywordInput').value='';
-    $('#bloomsInput').value='Evaluate';
+    $('#bloomsInput').value='-';
     $('#conciseToggle').checked=false;
-    $('#selInput').value='';
+    $('#selInput').value='-';
     setSelectedResponseMode('4');
     toggleAnswerFields('4');
     populateSELDropDown(); // Update SEL dropdown for new grade
-    toast('Filters reset to default');
+    
+    // Also clear any saved keywords (both global and run-scoped)
+    save('mxq_keywords', '');
+    save('mxq_keywords_active', '');
+    $('#keywordInput').value = '';
+    
+    // Reset question tracking to start fresh
+    localStorage.removeItem('mxq_used_questions');
+    console.log('Question tracking reset - all questions will be available again');
+    
+    toast('Filters, keywords & question tracking cleared');
   };
   
   $('#aiTest').onclick=async()=>{ 
@@ -3056,8 +3924,17 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     
     // Generate new question with current settings and new mode
     const count = mode==='open' ? 1 : mode==='wyr' ? 2 : parseInt(mode,10);
-    const kw=load('mxq_keywords',''), grade=load('mxq_grade','2'), subject=load('mxq_subject','General'), ls=load('mxq_ls','General'), blooms=load('mxq_blooms','Evaluate');
+    let kw = load('mxq_keywords','');  // legacy default
+    const grade=load('mxq_grade',''),
+          subject=load('mxq_subject',''),
+          ls=load('mxq_ls',''),
+          blooms=load('mxq_blooms','');
     const concise=!!load('mxq_concise',false);
+    
+    // Prefer run-scoped keywords if present, otherwise empty string (don't drag stale ones)
+    const active = load('mxq_keywords_active','');
+    kw = (typeof active === 'string') ? active.trim() : '';
+    save('mxq_keywords_active', kw);
     
     console.log('Generation params:', {mode, count, kw, grade, subject, ls, blooms, concise});
     
@@ -3066,11 +3943,29 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
       const out=await geminiQ({count: count===1?4:count, kw, grade, subject, ls, blooms, concise});
       console.log('Gemini AI generation result:', out);
       
-      console.log('Setting question:', out.question);
-      await setQuestionSafe(out.question);
+      // Validate and repair the generated question
+      let candidate = {question: out.question, choices: out.choices};
+      let check = validateGeneratedQuestion(candidate);
+      if(!check || check.valid === false){
+        console.log('Validation failed, attempting repair:', check?.issues);
+        const fixed = repairGeneratedQuestion(candidate);
+        if(fixed){
+          candidate = fixed;
+          check = validateGeneratedQuestion(candidate);
+        }
+      }
+      if(!check || check.valid === false){
+        console.warn('Validation failed after repair:', check?.issues);
+        // graceful fallback to offline bank
+        const off = offlineQ(count===1?4:count,subject,ls,concise);
+        candidate = {question: off.question, choices: off.choices};
+      }
       
-      console.log('Applying choices:', out.choices);
-      applyChoices(count===1?'open':String(count), out.choices);
+      console.log('Setting question:', candidate.question);
+      await setQuestionSafe(candidate.question, false, false, false);
+      
+      console.log('Applying choices:', candidate.choices);
+      applyChoices(count===1?'open':String(count), candidate.choices);
       
       // Ensure students stay in parking lot after question changes
       distribute(false);
@@ -3085,7 +3980,7 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     }catch(e){
       console.log('Gemini AI generation failed, using offline:', e);
       const out=offlineQ(count===1?4:count,subject,ls,concise);
-      await setQuestionSafe(out.question, false, out.fromBank);
+      await setQuestionSafe(out.question, false, out.fromBank, false);
       applyChoices(count===1?'open':String(count), out.choices);
       
       // Ensure students stay in parking lot after question changes
@@ -3105,8 +4000,17 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     const saved=load('mxq_choices')||{};
     const modeSel=saved.mode||'4';
     const count = modeSel==='open' ? 1 : modeSel==='wyr' ? 2 : parseInt(modeSel,10);
-    const kw=load('mxq_keywords',''), grade=load('mxq_grade','2'), subject=load('mxq_subject','General'), ls=load('mxq_ls','General'), blooms=load('mxq_blooms','Evaluate');
+    let kw = load('mxq_keywords','');  // legacy default
+    const grade=load('mxq_grade',''),
+          subject=load('mxq_subject',''),
+          ls=load('mxq_ls',''),
+          blooms=load('mxq_blooms','');
     const concise=!!load('mxq_concise',false);
+    
+    // Prefer run-scoped keywords if present, otherwise empty string (don't drag stale ones)
+    const active = load('mxq_keywords_active','');
+    kw = (typeof active === 'string') ? active.trim() : '';
+    save('mxq_keywords_active', kw);
     
     console.log('Generation params:', {modeSel, count, kw, grade, subject, ls, blooms, concise});
     
@@ -3115,11 +4019,29 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
       const out=await geminiQ({count: count===1?4:count, kw, grade, subject, ls, blooms, concise});
       console.log('AI generation result:', out);
       
-      console.log('Setting question:', out.question);
-      await setQuestionSafe(out.question);
+      // Validate and repair the generated question
+      let candidate = {question: out.question, choices: out.choices};
+      let check = validateGeneratedQuestion(candidate);
+      if(!check || check.valid === false){
+        console.log('Validation failed, attempting repair:', check?.issues);
+        const fixed = repairGeneratedQuestion(candidate);
+        if(fixed){
+          candidate = fixed;
+          check = validateGeneratedQuestion(candidate);
+        }
+      }
+      if(!check || check.valid === false){
+        console.warn('Validation failed after repair:', check?.issues);
+        // graceful fallback to offline bank
+        const off = offlineQ(count===1?4:count,subject,ls,concise);
+        candidate = {question: off.question, choices: off.choices};
+      }
       
-      console.log('Applying choices:', out.choices);
-      applyChoices(count===1?'open':String(count), out.choices);
+      console.log('Setting question:', candidate.question);
+      await setQuestionSafe(candidate.question, false, false, false);
+      
+      console.log('Applying choices:', candidate.choices);
+      applyChoices(count===1?'open':String(count), candidate.choices);
       
       // Ensure students stay in parking lot after question changes
       distribute(false);
@@ -3134,7 +4056,7 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     }catch(e){
       console.log('AI generation failed, using offline:', e);
       const out=offlineQ(count===1?4:count,subject,ls,concise);
-      await setQuestionSafe(out.question, false, out.fromBank);
+      await setQuestionSafe(out.question, false, out.fromBank, false);
       applyChoices(count===1?'open':String(count), out.choices);
       
       // Ensure students stay in parking lot after question changes
@@ -3153,8 +4075,16 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     console.log('=== GENERATE BUTTON CLICKED ===');
     const modeSel=getSelectedResponseMode();
     const count = modeSel==='open' ? 1 : modeSel==='wyr' ? 2 : parseInt(modeSel,10);
-    const kw=$('#keywordInput').value.trim(), grade=$('#gradeInput').value, subject=$('#subjectInput').value, ls=$('#lsInput').value, blooms=$('#bloomsInput').value;
-    const concise=!!$('#conciseToggle').checked; save('mxq_concise', concise);
+    const kw=$('#keywordInput').value.trim(),
+          grade=$('#gradeInput').value,
+          subject=$('#subjectInput').value,
+          ls=$('#lsInput').value,
+          blooms=$('#bloomsInput').value;
+    const concise=!!$('#conciseToggle').checked; 
+    save('mxq_concise', concise);
+    
+    // run-scoped keywords (only for this generation)
+    save('mxq_keywords_active', kw);
     
     console.log('Generation params:', {modeSel, count, kw, grade, subject, ls, blooms, concise});
     
@@ -3163,11 +4093,29 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
       const out=await geminiQ({count: count===1?4:count, kw, grade, subject, ls, blooms, concise});
       console.log('AI generation result:', out);
       
-      console.log('Setting question:', out.question);
-      await setQuestionSafe(out.question);                  // paint first and wait
+      // Validate and repair the generated question
+      let candidate = {question: out.question, choices: out.choices};
+      let check = validateGeneratedQuestion(candidate);
+      if(!check || check.valid === false){
+        console.log('Validation failed, attempting repair:', check?.issues);
+        const fixed = repairGeneratedQuestion(candidate);
+        if(fixed){
+          candidate = fixed;
+          check = validateGeneratedQuestion(candidate);
+        }
+      }
+      if(!check || check.valid === false){
+        console.warn('Validation failed after repair:', check?.issues);
+        // graceful fallback to offline bank
+        const off = offlineQ(count===1?4:count,subject,ls,concise);
+        candidate = {question: off.question, choices: off.choices};
+      }
       
-      console.log('Applying choices:', out.choices);
-      applyChoices(count===1?'open':String(count), out.choices); // keep emojis!
+      console.log('Setting question:', candidate.question);
+      await setQuestionSafe(candidate.question, false, false, false);                  // paint first and wait
+      
+      console.log('Applying choices:', candidate.choices);
+      applyChoices(count===1?'open':String(count), candidate.choices); // keep emojis!
       
       console.log('Updating answer fields...');
       ['a1','a2','a3','a4'].forEach((id,i)=> $('#'+id).value=(out.choices?.[i]||'').replace(/^(\p{Emoji_Presentation}|\p{Emoji})\s*/u,'').trim());
@@ -3185,7 +4133,7 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     }catch(e){
       console.log('AI generation failed, using offline:', e);
       const out=offlineQ(count===1?4:count,subject,ls,concise);
-      await setQuestionSafe(out.question, false, out.fromBank);
+      await setQuestionSafe(out.question, false, out.fromBank, false);
       applyChoices(count===1?'open':String(count), out.choices);
       
       // Ensure students stay in parking lot after question changes
@@ -3200,14 +4148,25 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     }
   };
 
+  // Info dialog functionality
+  $('#inquiryAgentLogo').onclick=()=>$('#infoModal').classList.add('show');
+  $('#closeInfo').onclick=()=>$('#infoModal').classList.remove('show');
+  
   // roster/save/load/reset buttons
   $('#openRoster').onclick=()=>$('#rosterModal').classList.add('show');
   $('#closeRoster').onclick=()=>$('#rosterModal').classList.remove('show');
   $('#applyRoster').onclick=()=>{ roster=$('#rosterInput').value.split(/\n+/).map(s=>s.trim()).filter(Boolean); save('mxq_roster',roster); makeBadges(); awaitLayoutSpread(); $('#rosterModal').classList.remove('show'); toast('Roster applied') };
   $('#saveBtn').onclick=()=>{const layout=badges.map(b=>({name:b.textContent.trim(),left:b.style.left,top:b.style.top,zone:b.dataset.zone,hidden:b.classList.contains('pickedHidden'),ig:b.dataset.ignore==='true'})); save('mxq_layout',layout); toast('Layout saved')};
   $('#loadBtn').onclick=()=>{const layout=load('mxq_layout'); if(!layout){toast('No saved layout');return} const map=new Map(layout.map(x=>[x.name,x])); badges.forEach(b=>{const r=map.get(b.textContent.trim()); if(r){b.style.left=r.left;b.style.top=r.top;b.dataset.zone=r.zone;b.dataset.lastX=r.left;b.dataset.lastY=r.top;b.classList.toggle('pickedHidden',!!r.hidden); if(b.dataset.zone==='parking') b.classList.add('inParking'); else b.classList.remove('inParking');}}); stats(); toast('Layout loaded')};
-  $('#allToParkingBtn').onclick=()=>{distribute(true); toast('All to Parking')};
+
   $('#resetWeekBtn').onclick=()=>{pickedSet.clear();save('mxq_picked',[]);badges.forEach(b=>b.classList.remove('pickedHidden')); stats(); toast('Weekly picks cleared')};
+  
+  // Reset questions button - clears question tracking to start fresh
+  $('#resetQuestionsBtn').onclick=()=>{
+    localStorage.removeItem('mxq_used_questions');
+    console.log('Question tracking manually reset - all questions will be available again');
+    toast('Question tracking reset - all questions available');
+  };
   $('#quickReset').onclick=()=>{
     distribute(true); 
     resetT(); // Also reset timer
@@ -3517,7 +4476,7 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     roster = load('mxq_roster') || $('#rosterInput').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
     console.log('Roster loaded:', roster.length, 'students');
 
-    const grade=load('mxq_grade','2'), subject=load('mxq_subject','General'), ls=load('mxq_ls','General'), blooms=load('mxq_blooms','Evaluate'), kw=load('mxq_keywords',''); const concise=!!load('mxq_concise',false);
+          const grade=load('mxq_grade',''), subject=load('mxq_subject',''), ls=load('mxq_ls',''), blooms=load('mxq_blooms',''), kw=load('mxq_keywords',''); const concise=!!load('mxq_concise',false);
     console.log('Generation params:', {grade, subject, ls, blooms, kw, concise});
     
     let out;
@@ -3556,15 +4515,38 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
   }
   boot();
   
+  // Immediate fallback check
+  const immediateCheck = () => {
+    const questionEl = document.getElementById('question');
+    console.log('Immediate check - Question element:', questionEl);
+    console.log('Immediate check - Question text:', questionEl?.textContent);
+    if (questionEl && (questionEl.textContent === 'Loading question…' || !questionEl.textContent.trim())) {
+      console.log('Immediate fallback: Setting default question');
+      setQuestionSafe('What is one smart way you can explain your thinking today?');
+      const fallbackChoices = ['🤝 Work with a partner', '🎲 Ask a question', '📖 Explain with an example', '📝 Other (explain)'];
+      buildZones(fallbackChoices, ['blue', 'red', 'green', 'purple']);
+      save('mxq_choices', {q: 'What is one smart way you can explain your thinking today?', choices: fallbackChoices, mode: '4'});
+    } else {
+      console.log('Immediate check - question already loaded');
+    }
+  };
+  
+  // Run immediate check after a short delay to ensure DOM is ready
+  setTimeout(immediateCheck, 100);
+  
   // Fallback to ensure question loads
   setTimeout(() => {
     const questionEl = document.getElementById('question');
+    console.log('Fallback check - Question element:', questionEl);
+    console.log('Fallback check - Question text:', questionEl?.textContent);
     if (questionEl && (questionEl.textContent === 'Loading question…' || !questionEl.textContent.trim())) {
       console.log('Fallback: Setting default question');
       setQuestionSafe('What is one smart way you can explain your thinking today?');
       const fallbackChoices = ['🤝 Work with a partner', '🎲 Ask a question', '📖 Explain with an example', '📝 Other (explain)'];
       buildZones(fallbackChoices, ['blue', 'red', 'green', 'purple']);
       save('mxq_choices', {q: 'What is one smart way you can explain your thinking today?', choices: fallbackChoices, mode: '4'});
+    } else {
+      console.log('Fallback not needed - question already loaded');
     }
   }, 2000);
 
@@ -3597,14 +4579,18 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
   let currentHighlightTimeout = null;
   
   function readAloud(){
+    console.log('readAloud function called');
+    
     // If already reading, stop it
     if (isReading) {
+      console.log('Stopping current reading');
       stopReading();
       return;
     }
     
     // Ensure voices are loaded
     if (window.speechSynthesis.getVoices().length === 0) {
+      console.log('Voices not loaded, waiting...');
       window.speechSynthesis.onvoiceschanged = () => {
         readAloud();
       };
@@ -3613,8 +4599,17 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     
     // Set reading state
     isReading = true;
-    $('#readAloudBtn').style.backgroundColor = '#22c55e';
-    $('#readAloudBtn').style.color = 'white';
+    const readBtn = $('#readAloudBtn');
+    readBtn.style.backgroundColor = '#22c55e';
+    readBtn.style.color = 'white';
+    readBtn.style.transform = 'scale(0.95)';
+    readBtn.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.3)';
+    
+    // Reset button style after a short delay
+    setTimeout(() => {
+      readBtn.style.transform = '';
+      readBtn.style.boxShadow = '';
+    }, 150);
     
     const question = $('#question').textContent;
     const choices = Array.from(document.querySelectorAll('.zone h3')).map(h => h.textContent);
@@ -3785,7 +4780,33 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
   $('#plus30').onclick=()=>add(+30);
   $('#startPause').onclick=toggleRun;
   $('#tReset').onclick=resetT;
-  $('#readAloudBtn').onclick=readAloud;
+  // Enhanced read button with touch support for SMART Boards
+  const readBtn = $('#readAloudBtn');
+  if (readBtn) {
+    // Remove old onclick
+    readBtn.onclick = null;
+    
+    // Add multiple event listeners for maximum compatibility
+    readBtn.addEventListener('click', readAloud, { passive: false });
+    readBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      readAloud();
+    }, { passive: false });
+    readBtn.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch') {
+        e.preventDefault();
+        readAloud();
+      }
+    }, { passive: false });
+    
+    // Also add mousedown for immediate response
+    readBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      readAloud();
+    }, { passive: false });
+    
+    console.log('Read button enhanced with touch support for SMART Boards');
+  }
   renderTime();
 
   function switchModel(model) {
