@@ -14,11 +14,22 @@
     --p-red:#ffe7ea; --p-red-b:#fda4af;
     --p-green:#ecfff4; --p-green-b:#86efac;
     --p-purple:#f3e8ff; --p-purple-b:#c4b5fd;
+    --p-yellow:#fef3c7; --p-yellow-b:#f59e0b;
   }
-  html,body{height:100%;margin:0;background:radial-gradient(1200px 900px at 10% 0%, #0d1634, #0a0f1e 60%);color:var(--ink);font-family:'Lexend',system-ui,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden}
+  html,body{height:100%;margin:0;background:radial-gradient(1200px 900px at 10% 0%, #0d1634, #0a0f1e 60%);color:var(--ink);font-family:'Lexend',system-ui,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden;min-height:100vh;min-width:100vw}
   *{user-select:none} input,textarea,select,button{user-select:text}
 
-  .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:0;height:100vh;padding:12px;box-sizing:border-box}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:0;height:100vh;padding:12px;box-sizing:border-box;box-sizing:border-box}
+
+/* SMART Board optimization - only apply 16:9 when screen is very wide (like 4K displays) */
+@media screen and (min-width: 3000px) {
+  .app {
+    aspect-ratio: 16/9;
+    width: 100vw;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+}
 
   /* Top bar: 3 columns (stats | timer | actions) */
   .topbar{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;min-height:48px}
@@ -59,7 +70,15 @@
   }
 
   /* Stage */
-  .stage{position:relative;display:flex;flex-direction:column;gap:0;min-height:0;flex:1}
+  .stage{position:relative;display:flex;flex-direction:column;gap:0;min-height:0;flex:1;width:100%}
+
+/* SMART Board optimization - only apply 16:9 when screen is very wide */
+@media screen and (min-width: 3000px) {
+  .stage {
+    aspect-ratio: 16/9;
+    max-height: calc(100vh - 200px);
+  }
+}
   #badgeLayer{position:absolute;inset:0;z-index:10000;pointer-events:none}
   #badgeLayer .badge{pointer-events:auto}
 
@@ -70,6 +89,7 @@
   .red{background:var(--p-red);border-color:var(--p-red-b)}
   .green{background:var(--p-green);border-color:var(--p-green-b)}
   .purple{background:var(--p-purple);border-color:var(--p-purple-b)}
+  .yellow{background:var(--p-yellow);border-color:var(--p-yellow-b)}
 
   /* Parking */
   .parking{background:#0b1226;border-radius:16px;border:1px solid var(--stroke);padding:10px;min-height:210px;position:relative;flex-shrink:0}
@@ -77,7 +97,16 @@
   #parkingLabel{position:absolute;top:14px;left:16px;background:rgba(2,6,23,.8);border:1px solid #1f2937;color:#cbd5e1;padding:6px 10px;border-radius:10px;font-weight:900;font-size:14px;box-shadow:0 8px 18px rgba(0,0,0,.35)}
 
   /* Steps row */
-  .stepsRow{display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 10px;height:42px;background:#0b1226;border:1px solid var(--stroke);border-radius:12px;white-space:nowrap;flex-shrink:0}
+  .stepsRow{display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;height:48px;background:#0b1226;border:1px solid var(--stroke);border-radius:12px;white-space:nowrap;flex-shrink:0;margin-top:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);position:relative;z-index:100}
+
+/* Ensure steps row is always visible on all screen sizes */
+@media screen and (max-height: 800px) {
+  .stepsRow {
+    height: 42px;
+    padding: 6px 10px;
+    margin-top: 4px;
+  }
+}
   .stepPill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-weight:900;font-size:14px;background:#0f172a;border:1px solid #1f2937}
   .stepSep{opacity:.7}
 
@@ -104,6 +133,9 @@
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
   .modal.show{display:flex}
   .sheet{width:min(1100px,95vw);max-height:90vh;overflow:auto;background:#0b1226;border:1px solid var(--stroke);border-radius:18px;padding:18px;box-shadow:0 22px 64px rgba(0,0,0,.5);color:var(--ink)}
+  
+  /* Roster modal should be above settings modal */
+  #rosterModal{z-index:1000}
   .sheet h2{margin:0 0 10px}
   .sheet section{border:1px solid #1f2937;border-radius:14px;padding:12px;margin:10px 0;background:#0c1428}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -202,12 +234,16 @@
   <div class="stage" id="stage">
     <div class="zones" id="zones"></div>
     <div class="parking" id="parking"><div id="parkingPad"></div><div id="parkingLabel">🅿️ Parking Lot / Absent</div></div>
-    <div class="stepsRow">
+    <div class="stepsRow" style="position: relative;">
       <div class="stepPill">📖 READ</div><span class="stepSep">›</span>
       <div class="stepPill">🤔 THINK</div><span class="stepSep">›</span>
       <div class="stepPill">👥 DISCUSS</div><span class="stepSep">›</span>
       <div class="stepPill">➡️ MOVE</div><span class="stepSep">›</span>
       <div class="stepPill">🗣️ EXPLAIN</div>
+      
+      <!-- Question source indicators - positioned on the right side -->
+      <div id="aiIndicator" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: white; color: #0a0f1e; border-radius: 50%; width: 24px; height: 24px; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; z-index: 10; opacity: 0.9; border: 2px solid #0a0f1e;">A</div>
+      <div id="bankIndicator" style="position: absolute; right: 40px; top: 50%; transform: translateY(-50%); background: #6b7280; color: white; border-radius: 50%; width: 24px; height: 24px; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; z-index: 10; opacity: 0.8; border: 2px solid #0a0f1e;">B</div>
     </div>
     <div id="badgeLayer"></div>
   </div>
@@ -339,18 +375,15 @@
 <!-- Roster modal -->
 <div class="modal" id="rosterModal"><div class="sheet">
   <h2>👥 Edit roster (students only)</h2>
-  <textarea id="rosterInput" style="width:100%;min-height:260px">Abdallah
-Robyn
+  <textarea id="rosterInput" style="width:100%;min-height:260px">Robyn
 Layla
 Keerthy
 Hakim
 Melania
-Halo
 Abbas
 Penelope
 Harnoor
 Sean
-Su
 Caleb
 Elena
 Selena
@@ -358,7 +391,8 @@ Anisha
 Iris
 Jazmine
 Alayna
-Shreyansh</textarea>
+Shreyansh
+August</textarea>
   <div class="row"><button id="applyRoster">Apply roster</button><button id="closeRoster">Cancel</button></div>
 </div></div>
 
@@ -808,8 +842,9 @@ Shreyansh</textarea>
     const box = document.getElementById('qDebug');
     const last = localStorage.getItem('mxq_last_question_raw') || '(none)';
     const meta = localStorage.getItem('mxq_ai_lastgen') || '(no meta)';
+    const wasRepaired = localStorage.getItem('mxq_question_repaired') === 'true';
     box.style.display='block';
-    box.textContent = `Q(raw): ${last}  |  meta: ${meta}`;
+    box.textContent = `Q(raw): ${last}  |  meta: ${meta}${wasRepaired ? ' | REPAIRED' : ''}`;
   }
   async function renderQuestionForce(text){
     console.log('renderQuestionForce called with:', text);
@@ -883,11 +918,43 @@ Shreyansh</textarea>
       questionEl.style.fontSize = fontSize + 'px';
     }
   }
-  function setQuestionSafe(q){
-    console.log('setQuestionSafe called with:', q);
+  function setQuestionSafe(q, wasRepaired = false, fromBank = false){
+    console.log('setQuestionSafe called with:', q, 'wasRepaired:', wasRepaired, 'fromBank:', fromBank);
     let text = (q||'').trim();
     console.log('Trimmed text:', text);
     localStorage.setItem('mxq_last_question_raw', text);
+    
+    // Track if this question was repaired
+    if (wasRepaired) {
+      localStorage.setItem('mxq_question_repaired', 'true');
+      console.log('Question marked as repaired');
+    } else {
+      localStorage.removeItem('mxq_question_repaired');
+    }
+    
+    // Show/hide AI indicator (white A)
+    const aiIndicator = document.getElementById('aiIndicator');
+    if (aiIndicator) {
+      if (!fromBank) {
+        aiIndicator.style.display = 'flex';
+        aiIndicator.title = 'AI generated question';
+      } else {
+        aiIndicator.style.display = 'none';
+        aiIndicator.title = '';
+      }
+    }
+    
+    // Show/hide bank indicator (grey B)
+    const bankIndicator = document.getElementById('bankIndicator');
+    if (bankIndicator) {
+      if (fromBank) {
+        bankIndicator.style.display = 'flex';
+        bankIndicator.title = 'Question from offline bank';
+      } else {
+        bankIndicator.style.display = 'none';
+        bankIndicator.title = '';
+      }
+    }
     
     if(!text || text.replace(/\s+/g,'').length<2){
       console.log('Question too short, using fallback');
@@ -972,23 +1039,52 @@ Shreyansh</textarea>
 
   // ---------- parking + badges + auto-bump ----------
   const TEACHER='Mr. Cushman';
-  let roster=[], badges=[], drag=null, pickedSet=new Set();
+  let roster=[], badges=[], activeDrags=new Map(), pickedSet=new Set();
   function parkingGrid(){const pad=$('#parkingPad'), rs=$('#stage').getBoundingClientRect(); const r=pad.getBoundingClientRect(); const topPad=42; const left0=r.left-rs.left+20, top0=r.top-rs.top+topPad, usableW=r.width-40; return {left0, top0, cols:Math.max(4,Math.floor(usableW/140))};}
   function distribute(resetAll=false){
     const g=parkingGrid(); let i=0;
-    badges.filter(b=>b.dataset.ignore!=='true').forEach(b=>{
-      if(!resetAll && b.dataset.zone!=='parking') return;
-      const col=i%g.cols, row=Math.floor(i/g.cols);
-      b.style.left=(g.left0+col*140)+'px'; b.style.top=(g.top0+row*64)+'px';
-      b.dataset.zone='parking'; b.dataset.lastX=b.style.left; b.dataset.lastY=b.style.top;
-      b.classList.add('inParking'); i++;
+    
+    // Get all student badges (excluding teacher)
+    const studentBadges = badges.filter(b => b.dataset.ignore !== 'true');
+    
+    // Calculate optimal spacing to ensure no overlap
+    const badgeWidth = 140;
+    const badgeHeight = 64;
+    const spacing = 10; // Extra space between badges
+    
+    studentBadges.forEach(b => {
+      if (!resetAll && b.dataset.zone !== 'parking') return;
+      
+      const col = i % g.cols;
+      const row = Math.floor(i / g.cols);
+      
+      // Position with proper spacing
+      const x = g.left0 + col * (badgeWidth + spacing);
+      const y = g.top0 + row * (badgeHeight + spacing);
+      
+      b.style.left = x + 'px';
+      b.style.top = y + 'px';
+      b.dataset.zone = 'parking';
+      b.dataset.lastX = b.style.left;
+      b.dataset.lastY = b.style.top;
+      b.classList.add('inParking');
+      i++;
     });
-    i++;
-    const t=badges.find(b=>b.dataset.ignore==='true');
-    if(t){
-      const col=i%g.cols,row=Math.floor(i/g.cols);
-      t.style.left=(g.left0+col*140)+'px'; t.style.top=(g.top0+row*64)+'px';
-      t.dataset.zone='parking'; t.dataset.lastX=t.style.left; t.dataset.lastY=t.style.top;
+    
+    // Position teacher badge with proper spacing
+    const t = badges.find(b => b.dataset.ignore === 'true');
+    if (t) {
+      const col = i % g.cols;
+      const row = Math.floor(i / g.cols);
+      
+      const x = g.left0 + col * (badgeWidth + spacing);
+      const y = g.top0 + row * (badgeHeight + spacing);
+      
+      t.style.left = x + 'px';
+      t.style.top = y + 'px';
+      t.dataset.zone = 'parking';
+      t.dataset.lastX = t.style.left;
+      t.dataset.lastY = t.style.top;
       t.classList.add('inParking');
     }
   }
@@ -1011,9 +1107,37 @@ Shreyansh</textarea>
     stats();
   }
   function enableDrag(el){
-    el.addEventListener('pointerdown',e=>{e.preventDefault();el.setPointerCapture(e.pointerId);const r=el.getBoundingClientRect();drag={el,dx:e.clientX-r.left,dy:e.clientY-r.top};el.style.zIndex=Date.now();});
-    el.addEventListener('pointermove',e=>{if(!drag||drag.el!==el)return;const s=$('#stage').getBoundingClientRect();el.style.left=(e.clientX-s.left-drag.dx)+'px';el.style.top=(e.clientY-s.top-drag.dy)+'px';});
-    el.addEventListener('pointerup',()=>{if(!drag||drag.el!==el)return;settle(el);drag=null;});
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      el.setPointerCapture(e.pointerId);
+      const r = el.getBoundingClientRect();
+      activeDrags.set(e.pointerId, {
+        el,
+        dx: e.clientX - r.left,
+        dy: e.clientY - r.top
+      });
+      el.style.zIndex = Date.now();
+    }, { passive: false });
+
+    el.addEventListener('pointermove', e => {
+      const d = activeDrags.get(e.pointerId);
+      if (!d || d.el !== el) return;
+      const s = $('#stage').getBoundingClientRect();
+      el.style.left = (e.clientX - s.left - d.dx) + 'px';
+      el.style.top = (e.clientY - s.top - d.dy) + 'px';
+    });
+
+    const end = e => {
+      const d = activeDrags.get(e.pointerId);
+      if (!d || d.el !== el) return;
+      settle(el);
+      activeDrags.delete(e.pointerId);
+      el.releasePointerCapture?.(e.pointerId);
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('pointerleave', end);
+    el.addEventListener('pointerout', end);
   }
   function zoneSlots(zoneEl){
     // returns an array of absolute positions inside zone where a badge could snap, avoiding the title
@@ -1254,17 +1378,10 @@ Shreyansh</textarea>
   const GEMINI_MODEL_DEFAULT='gemini-2.0-flash';
   // API Keys - Main and 2 Backups
   const API_KEYS = {
-    main: load('mxq_api_key_main') || 'YOUR_MAIN_API_KEY_HERE',
-    BU1: load('mxq_api_key_BU1') || 'YOUR_BU1_API_KEY_HERE',
-    BU2: load('mxq_api_key_BU2') || 'YOUR_BU2_API_KEY_HERE'
+    main: 'AIzaSyDpx9ITK7RRlxYgbVaF_gkDJAAdmkjBzoQ',
+    BU1: 'AIzaSyAiH3K8dV-fQ5sRskV5elkw3zGj2UMAtTM',
+    BU2: 'AIzaSyAqBvW8uSr6ie9PkM9XDL3zEMCjy07eCoY'
   };
-  
-  // Debug: Log what was loaded
-  console.log('API_KEYS loaded:', {
-    main: API_KEYS.main.substring(0, 10) + '...',
-    BU1: API_KEYS.BU1.substring(0, 10) + '...',
-    BU2: API_KEYS.BU2.substring(0, 10) + '...'
-  });
   
   // Token tracking for each key
   const TOKEN_LIMITS = {
@@ -1635,7 +1752,7 @@ Shreyansh</textarea>
     const verb = pickBloomsVerb(f.blooms);
     const {name: strand, topic} = pickSubjectStrand(f.subject);
     const lsLine = f.learningSkill !== "General" ? LEARNING_SKILL_NUDGES[f.learningSkill] : "";
-    const keyLine = f.keywords ? `Focus on: ${f.keywords}.` : "";
+    const keyLine = f.keywords ? `CRITICAL: The question MUST focus primarily on this keyword: ${f.keywords}. Do NOT mix it with unrelated concepts from previous questions. The question should be directly about ${f.keywords} and make logical sense.` : "";
     const selLine = getSelNudge(f.sel);
     const lengthRule = f.concise
       ? "Keep question ≤ 12 words; answers ≤ 4 words each."
@@ -1688,8 +1805,289 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     const prompt = ontarioPrompt + '\n\n' + additionalConstraints;
     
     console.log('Built Ontario prompt:', prompt);
+    console.log('Current filters being used:', {kw, grade, subject, ls, blooms, concise});
     return prompt;
   }
+  // Question validation function
+  function validateGeneratedQuestion(obj) {
+    if (!obj || typeof obj !== 'object') return false;
+    
+    // Check if question exists and is a string
+    if (!obj.question || typeof obj.question !== 'string') return false;
+    
+    // Check if choices exist and is an array
+    if (!obj.choices || !Array.isArray(obj.choices) || obj.choices.length < 2) return false;
+    
+    const question = obj.question.trim();
+    const choices = obj.choices.map(c => c.trim()).filter(Boolean);
+    
+    // Validation checks
+    const issues = [];
+    
+    // 1. Question should be standalone (not reference previous activities)
+    const previousActivityPatterns = [
+      /\b(?:this|that|the|your)\s+(?:activity|lesson|work|task|project|experiment|game|story|book|text|reading|video|discussion|conversation|group|partner|team)\b/i,
+      /\b(?:continue|finish|complete|extend|build\s+on|add\s+to)\b/i,
+      /\b(?:based\s+on|from\s+what|using\s+the|with\s+the)\b/i,
+      /\b(?:what\s+you\s+learned|what\s+you\s+discovered|what\s+you\s+found)\b/i
+    ];
+    
+    if (previousActivityPatterns.some(pattern => pattern.test(question))) {
+      issues.push("Question references previous activities or assumes prior context");
+    }
+    
+    // 2. Question should be clear and complete
+    if (question.length < 10 || question.length > 100) {
+      issues.push("Question is too short or too long");
+    }
+    
+    if (!/[?]$/.test(question)) {
+      issues.push("Question doesn't end with a question mark");
+    }
+    
+    // 3. Question should relate to the choices provided
+    const questionWords = question.toLowerCase().split(/\s+/).filter(word => word.length > 3);
+    const choiceWords = choices.join(' ').toLowerCase().split(/\s+/).filter(word => word.length > 3);
+    
+    // Check if there's some thematic connection between question and choices
+    const commonWords = questionWords.filter(word => choiceWords.includes(word));
+    if (commonWords.length === 0 && questionWords.length > 0) {
+      issues.push("Question and choices lack thematic connection");
+    }
+    
+    // 4. Check if keywords are being used (if keywords were specified)
+    const savedKeywords = load('mxq_keywords', '');
+    if (savedKeywords && savedKeywords.trim()) {
+      const keywordList = savedKeywords.toLowerCase().split(/[,\s]+/).filter(k => k.length > 2);
+      const questionAndChoices = (question + ' ' + choices.join(' ')).toLowerCase();
+      
+      // Check if at least some keywords are present in the generated content
+      const usedKeywords = keywordList.filter(keyword => questionAndChoices.includes(keyword));
+      if (usedKeywords.length === 0) {
+        issues.push(`Keywords not used: ${savedKeywords} - generated content should include these concepts`);
+      } else if (usedKeywords.length < keywordList.length * 0.5) {
+        // If less than 50% of keywords are used, warn but don't fail
+        console.log(`Only ${usedKeywords.length}/${keywordList.length} keywords used: ${usedKeywords.join(', ')}`);
+      }
+      
+      // 4b. Check for nonsensical keyword combinations
+      if (keywordList.length > 1) {
+        // Check if the question makes logical sense with multiple keywords
+        const questionLower = question.toLowerCase();
+        const hasUnrelatedKeywords = keywordList.some(keyword => {
+          // Look for patterns where keywords are forced together without logical connection
+          const forcedPatterns = [
+            new RegExp(`\\b${keyword}\\b.*\\b(?:related to|about|with|and)\\b.*\\b(?!${keywordList.join('|')})\\w+`, 'i'),
+            new RegExp(`\\b(?:related to|about|with|and)\\b.*\\b${keyword}\\b`, 'i')
+          ];
+          return forcedPatterns.some(pattern => pattern.test(questionLower));
+        });
+        
+        if (hasUnrelatedKeywords) {
+          issues.push("Question contains forced or unrelated keyword combinations that don't make logical sense");
+        }
+      }
+      
+      // 4c. Check for single keyword focus - question should primarily focus on the main keyword
+      if (keywordList.length === 1) {
+        const mainKeyword = keywordList[0];
+        const questionLower = question.toLowerCase();
+        
+        // Check if the question is primarily about the keyword, not mixing with unrelated concepts
+        const hasUnrelatedMixing = questionLower.includes(mainKeyword) && 
+          (questionLower.includes('related to') || questionLower.includes('about') || questionLower.includes('with')) &&
+          !questionLower.includes(mainKeyword + ' ') && !questionLower.includes(' ' + mainKeyword);
+        
+        if (hasUnrelatedMixing) {
+          issues.push("Question mixes the keyword with unrelated concepts instead of focusing on it directly");
+        }
+        
+        // 4d. Aggressive check for any words that aren't the current keyword or common words
+        const commonWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'up', 'down', 'out', 'off', 'over', 'under', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'among', 'inside', 'outside', 'near', 'far', 'here', 'there', 'this', 'that', 'these', 'those', 'what', 'how', 'which', 'why', 'when', 'where', 'who', 'can', 'will', 'should', 'would', 'could', 'may', 'might', 'must', 'shall', 'do', 'does', 'did', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'go', 'goes', 'went', 'gone', 'going', 'make', 'makes', 'made', 'making', 'get', 'gets', 'got', 'getting', 'know', 'knows', 'knew', 'knowing', 'think', 'thinks', 'thought', 'thinking', 'see', 'sees', 'saw', 'seeing', 'come', 'comes', 'came', 'coming', 'want', 'wants', 'wanted', 'wanting', 'look', 'looks', 'looked', 'looking', 'use', 'uses', 'used', 'using', 'find', 'finds', 'found', 'finding', 'give', 'gives', 'gave', 'giving', 'tell', 'tells', 'told', 'telling', 'work', 'works', 'worked', 'working', 'call', 'calls', 'called', 'calling', 'try', 'tries', 'tried', 'trying', 'ask', 'asks', 'asked', 'asking', 'need', 'needs', 'needed', 'needing', 'feel', 'feels', 'felt', 'feeling', 'become', 'becomes', 'became', 'becoming', 'leave', 'leaves', 'left', 'leaving', 'put', 'puts', 'put', 'putting', 'mean', 'means', 'meant', 'meaning', 'keep', 'keeps', 'kept', 'keeping', 'let', 'lets', 'let', 'letting', 'begin', 'begins', 'began', 'beginning', 'seem', 'seems', 'seemed', 'seeming', 'help', 'helps', 'helped', 'helping', 'talk', 'talks', 'talked', 'talking', 'turn', 'turns', 'turned', 'turning', 'start', 'starts', 'started', 'starting', 'show', 'shows', 'showed', 'showing', 'hear', 'hears', 'heard', 'hearing', 'play', 'plays', 'played', 'playing', 'run', 'runs', 'ran', 'running', 'move', 'moves', 'moved', 'moving', 'like', 'likes', 'liked', 'liking', 'live', 'lives', 'lived', 'living', 'stand', 'stands', 'stood', 'standing', 'sit', 'sits', 'sat', 'sitting', 'lie', 'lies', 'lay', 'lying', 'walk', 'walks', 'walked', 'walking', 'grow', 'grows', 'grew', 'growing', 'open', 'opens', 'opened', 'opening', 'close', 'closes', 'closed', 'closing', 'write', 'writes', 'wrote', 'writing', 'read', 'reads', 'read', 'reading', 'draw', 'draws', 'drew', 'drawing', 'sing', 'sings', 'sang', 'singing', 'dance', 'dances', 'danced', 'dancing', 'eat', 'drink', 'sleep', 'wake', 'wash', 'dress', 'brush', 'comb', 'tie', 'wear', 'carry', 'hold', 'catch', 'throw', 'kick', 'hit', 'push', 'pull', 'lift', 'drop', 'pick', 'cut', 'break', 'fix', 'build', 'clean', 'cook', 'bake', 'plant', 'water', 'feed', 'pet', 'ride', 'drive', 'fly', 'swim', 'climb', 'jump', 'hop', 'skip', 'bounce', 'roll', 'slide', 'swing', 'spin', 'twist', 'bend', 'stretch', 'reach', 'touch', 'feel', 'smell', 'taste', 'hear', 'see', 'look', 'watch', 'listen', 'speak', 'say', 'tell', 'ask', 'answer', 'question', 'explain', 'describe', 'name', 'label', 'count', 'add', 'subtract', 'multiply', 'divide', 'measure', 'weigh', 'compare', 'sort', 'group', 'match', 'find', 'solve', 'check', 'test', 'try', 'learn', 'study', 'practice', 'remember', 'forget', 'understand', 'know', 'think', 'believe', 'guess', 'wonder', 'imagine', 'create', 'make', 'build', 'design', 'draw', 'paint', 'color', 'write', 'read', 'tell', 'story', 'book', 'picture', 'game', 'toy', 'friend', 'family', 'home', 'school', 'class', 'teacher', 'student', 'help', 'share', 'care', 'love', 'happy', 'sad', 'angry', 'scared', 'excited', 'bored', 'tired', 'hungry', 'thirsty', 'hot', 'cold', 'big', 'small', 'long', 'short', 'tall', 'short', 'wide', 'narrow', 'thick', 'thin', 'heavy', 'light', 'fast', 'slow', 'loud', 'quiet', 'bright', 'dark', 'new', 'old', 'young', 'good', 'bad', 'nice', 'mean', 'kind', 'rude', 'polite', 'clean', 'dirty', 'neat', 'messy', 'easy', 'hard', 'simple', 'complicated', 'same', 'different', 'similar', 'opposite', 'first', 'last', 'next', 'before', 'after', 'begin', 'end', 'start', 'finish', 'open', 'close', 'on', 'off', 'yes', 'no', 'maybe', 'sure', 'okay', 'fine', 'great', 'awesome', 'terrible', 'wonderful', 'horrible', 'beautiful', 'ugly', 'fun', 'boring', 'interesting', 'exciting', 'calm', 'wild', 'safe', 'dangerous', 'strong', 'weak', 'healthy', 'sick', 'well', 'ill', 'happy', 'sad', 'angry', 'calm', 'nervous', 'confident', 'shy', 'brave', 'scared', 'smart', 'silly', 'serious', 'funny', 'quiet', 'loud', 'gentle', 'rough', 'careful', 'careless', 'patient', 'impatient', 'kind', 'mean', 'friendly', 'unfriendly', 'helpful', 'unhelpful', 'polite', 'rude', 'honest', 'dishonest', 'fair', 'unfair', 'responsible', 'irresponsible', 'organized', 'disorganized', 'neat', 'messy', 'clean', 'dirty', 'tidy', 'untidy', 'careful', 'careless', 'patient', 'impatient', 'brave', 'cowardly', 'strong', 'weak', 'healthy', 'sick', 'well', 'ill', 'happy', 'sad', 'angry', 'calm', 'nervous', 'confident', 'shy', 'brave', 'scared', 'smart', 'silly', 'serious', 'funny', 'quiet', 'loud', 'gentle', 'rough', 'careful', 'careless', 'patient', 'impatient', 'kind', 'mean', 'friendly', 'unfriendly', 'helpful', 'unhelpful', 'polite', 'rude', 'honest', 'dishonest', 'fair', 'unfair', 'responsible', 'irresponsible', 'organized', 'disorganized', 'neat', 'messy', 'clean', 'dirty', 'tidy', 'untidy', 'careful', 'careless', 'patient', 'impatient', 'brave', 'cowardly', 'strong', 'weak', 'healthy', 'sick', 'well', 'ill', 'happy', 'sad', 'angry', 'calm', 'nervous', 'confident', 'shy', 'brave', 'scared', 'smart', 'silly', 'serious', 'funny', 'quiet', 'loud', 'gentle', 'rough', 'careful', 'careless', 'patient', 'impatient', 'kind', 'mean', 'friendly', 'unfriendly', 'helpful', 'unhelpful', 'polite', 'rude', 'honest', 'dishonest', 'fair', 'unfair', 'responsible', 'irresponsible', 'organized', 'disorganized', 'neat', 'messy', 'clean', 'dirty', 'tidy', 'untidy', 'careful', 'careless', 'patient', 'impatient', 'brave', 'cowardly'];
+        
+        const questionWords = questionLower.split(/\s+/).filter(word => word.length > 2);
+        const nonKeywordWords = questionWords.filter(word => 
+          !commonWords.includes(word.toLowerCase()) && 
+          word.toLowerCase() !== mainKeyword.toLowerCase() &&
+          !word.toLowerCase().includes(mainKeyword.toLowerCase()) &&
+          !mainKeyword.toLowerCase().includes(word.toLowerCase())
+        );
+        
+        if (nonKeywordWords.length > 0) {
+          console.log('Non-keyword words detected:', nonKeywordWords);
+          issues.push(`Question contains words not related to current keyword: ${nonKeywordWords.join(', ')}`);
+        }
+      }
+    }
+    
+    // 5. Choices should be distinct and meaningful
+    if (choices.length !== new Set(choices).size) {
+      issues.push("Choices are not unique");
+    }
+    
+    const veryShortChoices = choices.filter(c => c.length < 3);
+    if (veryShortChoices.length > 0) {
+      issues.push("Some choices are too short to be meaningful");
+    }
+    
+    // 6. Question should be age-appropriate and clear
+    const complexPatterns = [
+      /\b(?:notwithstanding|furthermore|consequently|subsequently)\b/i,
+      /\b(?:hypothesis|methodology|quantitative|qualitative)\b/i
+    ];
+    
+    if (complexPatterns.some(pattern => pattern.test(question))) {
+      issues.push("Question uses language that may be too complex for the grade level");
+    }
+    
+    // Return validation result
+    if (issues.length > 0) {
+      console.log('Question validation failed:', issues);
+      return { valid: false, issues };
+    }
+    
+    return { valid: true };
+  }
+
+  // Question repair function - tries to fix AI-generated content to make it standalone
+  function repairGeneratedQuestion(obj) {
+    if (!obj || !obj.question || !obj.choices) return null;
+    
+    console.log('Attempting to repair question:', obj.question);
+    
+    let question = obj.question.trim();
+    let choices = obj.choices.map(c => c.trim()).filter(Boolean);
+    
+    // 0. Check if keywords are missing and try to incorporate them
+    const savedKeywords = load('mxq_keywords', '');
+    if (savedKeywords && savedKeywords.trim()) {
+      const keywordList = savedKeywords.toLowerCase().split(/[,\s]+/).filter(k => k.length > 2);
+      const questionAndChoices = (question + ' ' + choices.join(' ')).toLowerCase();
+      const missingKeywords = keywordList.filter(keyword => !questionAndChoices.includes(keyword));
+      
+      if (missingKeywords.length > 0) {
+        console.log('Missing keywords detected:', missingKeywords);
+        // Try to incorporate missing keywords into the question - but only the current keyword
+        const currentKeyword = missingKeywords[0];
+        
+        // Clean up any forced "related to" or "about" phrases that don't make sense
+        question = question.replace(/\s+(?:related to|about|with)\s+\w+\s*\?$/, '?');
+        
+        // Now add the current keyword in a logical way
+        if (question.toLowerCase().includes('how') || question.toLowerCase().includes('what')) {
+          // For "how" or "what" questions, make it about the keyword
+          question = question.replace(/\?$/, ` about ${currentKeyword}?`);
+        } else if (question.toLowerCase().includes('which')) {
+          // For "which" questions, make it about the keyword
+          question = question.replace(/\?$/, ` for ${currentKeyword}?`);
+        } else {
+          // For other question types, add the keyword naturally
+          question = question.replace(/\?$/, ` about ${currentKeyword}?`);
+        }
+      }
+    }
+    
+    // 1. Fix questions that reference previous activities
+    const repairPatterns = [
+      // Fix "continue working on..." → "How will you approach..."
+      {
+        pattern: /\b(?:continue|finish|complete|extend|build\s+on|add\s+to)\s+(?:working\s+on|your\s+work|the\s+task|this\s+project)\b/gi,
+        replacement: 'How will you approach'
+      },
+      // Fix "based on what you learned..." → "What strategy will you use..."
+      {
+        pattern: /\b(?:based\s+on|from\s+what)\s+(?:you\s+learned|you\s+discovered|you\s+found)\b/gi,
+        replacement: 'What strategy will you use'
+      },
+      // Fix "using the text/story/book..." → "How can you..."
+      {
+        pattern: /\b(?:using|with|from)\s+(?:the|your)\s+(?:text|story|book|reading|video|discussion)\b/gi,
+        replacement: 'How can you'
+      },
+      // Fix "what you learned in..." → "what you know about..."
+      {
+        pattern: /\b(?:what\s+you\s+learned|what\s+you\s+discovered)\s+(?:in|from|about)\b/gi,
+        replacement: 'what you know about'
+      },
+      // Fix "this activity/task/project" → "this learning situation"
+      {
+        pattern: /\b(?:this|that|the|your)\s+(?:activity|lesson|work|task|project|experiment|game)\b/gi,
+        replacement: 'this learning situation'
+      }
+    ];
+    
+    // Apply repair patterns
+    repairPatterns.forEach(({pattern, replacement}) => {
+      question = question.replace(pattern, replacement);
+    });
+    
+    // 2. Ensure question ends with question mark
+    if (!/[?]$/.test(question)) {
+      question = question.replace(/[.!]$/, '?');
+      if (!/[?]$/.test(question)) {
+        question += '?';
+      }
+    }
+    
+    // 3. Fix overly complex language
+    const complexWordReplacements = {
+      'notwithstanding': 'even though',
+      'furthermore': 'also',
+      'consequently': 'so',
+      'subsequently': 'then',
+      'hypothesis': 'prediction',
+      'methodology': 'method',
+      'quantitative': 'measurable',
+      'qualitative': 'descriptive'
+    };
+    
+    Object.entries(complexWordReplacements).forEach(([complex, simple]) => {
+      const regex = new RegExp(`\\b${complex}\\b`, 'gi');
+      question = question.replace(regex, simple);
+    });
+    
+    // 4. Ensure question is complete and clear
+    if (question.length < 10) {
+      question = 'How can you ' + question.replace(/^how\s+/i, '').replace(/^what\s+/i, 'show what you know about ');
+    }
+    
+    // 5. Fix choices to ensure they're meaningful
+    choices = choices.map(choice => {
+      if (choice.length < 3) {
+        return choice + ' (explain)';
+      }
+      return choice;
+    });
+    
+    // 6. Ensure choices are unique
+    const uniqueChoices = [];
+    const seen = new Set();
+    choices.forEach(choice => {
+      const cleanChoice = choice.toLowerCase().replace(/[^\w\s]/g, '').trim();
+      if (!seen.has(cleanChoice)) {
+        seen.add(cleanChoice);
+        uniqueChoices.push(choice);
+      }
+    });
+    
+    // Ensure we have at least 2 choices
+    while (uniqueChoices.length < 2) {
+      uniqueChoices.push('Other (explain)');
+    }
+    
+    const repaired = {
+      question: question,
+      choices: uniqueChoices,
+      wasRepaired: true,
+      originalQuestion: obj.question
+    };
+    
+    console.log('Question repaired from:', obj.question);
+    console.log('Question repaired to:', question);
+    
+    return repaired;
+  }
+
   function parseJSONLenient(txt){
     if(!txt) return null;
     let cleaned = txt.replace(/```[\s\S]*?```/g, m => m.replace(/```(?:json)?/gi,'').replace(/```/g,'')).replace(/```(?:json)?/gi,'').replace(/```/g,'').trim();
@@ -1796,13 +2194,38 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
         console.log('Response data:', data);
         const txt=(data?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join(' ').trim();
         console.log('Extracted text:', txt);
+        console.log('Raw AI response:', txt);
         localStorage.setItem('mxq_ai_raw', txt);
         obj0=parseJSONLenient(txt); // Assign to the outer variable
         console.log('Parsed object:', obj0);
+        console.log('Keywords being validated against:', load('mxq_keywords', ''));
         if(!obj0 || !Array.isArray(obj0.choices)) throw new Error('Bad AI JSON - missing or invalid choices array');
         
-        // If we get here, the request was successful
-        console.log('Success with model:', tryModel);
+        // Validate the generated question
+        const validation = validateGeneratedQuestion(obj0);
+        if (!validation.valid) {
+          console.log('Generated content failed validation:', validation.issues);
+          
+          // Try to repair the question before giving up
+          const repaired = repairGeneratedQuestion(obj0);
+          if (repaired && validateGeneratedQuestion(repaired).valid) {
+            console.log('Question successfully repaired and validated');
+            obj0 = repaired; // Use the repaired version
+          } else {
+            console.log('Question repair failed, trying next model');
+            
+            // If this is the last model to try, throw an error to trigger fallback
+            if (tryModel === modelsToTry[modelsToTry.length - 1]) {
+              throw new Error(`AI generation failed validation and repair: ${validation.issues.join(', ')}`);
+            }
+            
+            // Try next model
+            continue;
+          }
+        }
+        
+        // If we get here, the request was successful and validated (either original or repaired)
+        console.log('Success with model:', tryModel, '- content validated' + (obj0.wasRepaired ? ' (repaired)' : ''));
         
         // Increment token usage for successful generation
         incrementTokenUsage(getActiveKeyName());
@@ -1969,27 +2392,76 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
   }
   
   function offlineQ(count,subject,ls,concise){
+    // Enhanced offline questions that are more robust and standalone
     const qs={
-      General:['What is one way you can help our class learn well today? Explain your choice.','How can you show your thinking clearly? Explain your choice.'],
-      Responsibility:['How can you show responsibility during our work time? Explain.'],
-      Organization:['What can you do to stay organized for this task? Explain your choice.'],
-      'Independent Work':['What helps you stay focused when working on your own? Explain.'],
-      Collaboration:['What makes group work go well? Explain your choice.'],
-      Initiative:['What is a way you can take initiative in your learning today? Explain.'],
-      'Self-Regulation':['What will you do if you feel stuck or upset during learning? Explain.']
+      General:[
+        'What is one way you can help our class learn well today? Explain your choice.',
+        'How can you show your thinking clearly? Explain your choice.',
+        'What strategy will you use to stay focused during our work time?',
+        'How can you be a good learning partner today?'
+      ],
+      Responsibility:[
+        'How can you show responsibility during our work time? Explain.',
+        'What does being responsible look like in our classroom?',
+        'How can you take care of our learning materials today?'
+      ],
+      Organization:[
+        'What can you do to stay organized for this task? Explain your choice.',
+        'How will you keep track of your ideas and work today?',
+        'What tools or strategies help you stay organized?'
+      ],
+      'Independent Work':[
+        'What helps you stay focused when working on your own? Explain.',
+        'How do you know when you need help with a task?',
+        'What do you do to check your work when you finish?'
+      ],
+      Collaboration:[
+        'What makes group work go well? Explain your choice.',
+        'How can you help your partner or group succeed today?',
+        'What does good teamwork look like in our classroom?'
+      ],
+      Initiative:[
+        'What is a way you can take initiative in your learning today? Explain.',
+        'How can you go beyond what is expected in this task?',
+        'What new idea or approach would you like to try today?'
+      ],
+      'Self-Regulation':[
+        'What will you do if you feel stuck or upset during learning? Explain.',
+        'How can you manage your energy and focus today?',
+        'What strategies help you stay calm when things are challenging?'
+      ]
     };
-    let q=(qs[ls]||qs.General)[Math.floor(Math.random()*2)];
-    const base={General:['Use a model','Ask a question','Explain with an example','Other (explain)'],
-      Math:['Estimate first','Look for a pattern','Draw a model','Other (explain)'],
-      Language:['Use a detail from the text','Use your own example','Ask a question','Other (explain)'],
-      Science:['Observe','Make a prediction','Test an idea','Other (explain)'],
-      'Social Studies':['Consider different viewpoints','Use a map or timeline','Connect to our community','Other (explain)']};
-    const list=(base[subject]||base.General).slice(0,count>=4?4:count);
-    let choices; if(count>=3){choices=list.slice(0,count-1).concat('Other (explain)')} else {choices=list.slice(0,2)}
-    choices=addEmojisUnique(choices);
-    if(concise){ q=q.split(' ').slice(0,12).join(' '); choices=choices.map(c=>c.split(' ').slice(0,5).join(' ')); }
+    
+    // Select a question based on learning skill
+    let q = (qs[ls] || qs.General)[Math.floor(Math.random() * (qs[ls] || qs.General).length)];
+    
+    // Enhanced subject-specific choices that are more robust
+    const base={
+      General:['Use a model or example','Ask a thoughtful question','Explain with details','Other (explain)'],
+      Math:['Estimate first, then calculate','Look for patterns or relationships','Draw a picture or model','Other (explain)'],
+      Language:['Use specific details from the text','Connect to your own experiences','Ask a question to understand better','Other (explain)'],
+      Science:['Make careful observations','Make a prediction with reasoning','Test your idea safely','Other (explain)'],
+      'Social Studies':['Consider different viewpoints','Use maps, timelines, or charts','Connect to our community','Other (explain)']
+    };
+    
+    const list = (base[subject] || base.General).slice(0, count >= 4 ? 4 : count);
+    let choices;
+    
+    if(count >= 3) {
+      choices = list.slice(0, count-1).concat('Other (explain)');
+    } else {
+      choices = list.slice(0, 2);
+    }
+    
+    choices = addEmojisUnique(choices);
+    
+    if(concise) {
+      q = q.split(' ').slice(0, 12).join(' ');
+      choices = choices.map(c => c.split(' ').slice(0, 5).join(' '));
+    }
+    
     localStorage.setItem('mxq_ai_lastgen', JSON.stringify({used:'offline',questionSource:'offline',time:Date.now()}));
-    return {question:q,choices};
+    return {question: q, choices, fromBank: true};
   }
   async function getQ(count,kw,grade,subject,ls,blooms,concise){
     try{
@@ -2068,9 +2540,14 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     const isTyping = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT');
     
     if(e.key==='Enter'&&$('#settingsModal').classList.contains('show')){ 
-      if(isTyping) return; 
       e.preventDefault(); 
       $('#genBtn').click(); 
+    }
+    
+    // Enter key on main page generates new question
+    if(e.key==='Enter' && !$('#settingsModal').classList.contains('show') && !$('#aiModal').classList.contains('show')){
+      e.preventDefault();
+      generateWithCurrentSettings();
     }
     
     // Hotkeys that work without modifiers (only when not typing)
@@ -2081,13 +2558,8 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
         if($('#settingsModal').classList.contains('show')){
           $('#resetFiltersBtn').click();
         }
-        // Always trigger main page reset
+        // Always trigger main page reset (students to parking + timer reset)
         $('#quickReset').click();
-        // Return to main page and generate new question with defaults
-        setTimeout(() => {
-          setQuestionSafe('Loading...');
-          setResponseModeAndGenerate('2');
-        }, 100);
       }
       // G key triggers AI generation
       if(e.key.toLowerCase()==='g' && !e.ctrlKey && !e.altKey && !e.metaKey){
@@ -2348,9 +2820,8 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     updateTokenProgress();
   }
   $('#aiBtn').onclick=async()=>{ 
-    // Load the current API key from the API_KEYS object
-    const currentKey = API_KEYS.main;
-    $('#aiKey').value = currentKey; 
+    const savedKey = load('mxq_ai_key');
+    $('#aiKey').value = savedKey || 'AIzaSyDpx9ITK7RRlxYgbVaF_gkDJAAdmkjBzoQ'; 
     $('#aiModel').value=load('mxq_ai_model')||'gemini-2.0-flash'; 
     $('#aiModal').classList.add('show'); 
     
@@ -2417,22 +2888,7 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
       updateTokenProgress();
     }, 50);
   };
-  $('#aiSave').onclick=()=>{ 
-    // Update the API_KEYS object with the new key
-    const newKey = $('#aiKey').value.trim();
-    if(newKey && newKey.length > 10) {
-      API_KEYS.main = newKey;
-      save('mxq_api_key_main', newKey);
-      console.log('API key saved:', newKey.substring(0, 10) + '...');
-      toast('API key saved successfully!');
-    } else {
-      toast('Please enter a valid API key');
-      return;
-    }
-    save('mxq_ai_model',$('#aiModel').value.trim()); 
-    $('#aiModal').classList.remove('show'); 
-    aiStatus(); 
-  };
+  $('#aiSave').onclick=()=>{ save('mxq_ai_key',$('#aiKey').value.trim()); save('mxq_ai_model',$('#aiModel').value.trim()); $('#aiModal').classList.remove('show'); toast('AI settings saved'); aiStatus(); };
   $('#aiClose').onclick=()=>$('#aiModal').classList.remove('show');
   
   // Reset filters button
@@ -2616,13 +3072,30 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
       console.log('Applying choices:', out.choices);
       applyChoices(count===1?'open':String(count), out.choices);
       
+      // Ensure students stay in parking lot after question changes
+      distribute(false);
+      
+      // Cue reset to ensure all students are properly positioned
+      setTimeout(() => {
+        $('#quickReset').click();
+      }, 100);
+      
       aiStatus(); toast(`AI generated (${mode} responses)`);
       console.log('=== GENERATION COMPLETE ===');
     }catch(e){
       console.log('Gemini AI generation failed, using offline:', e);
       const out=offlineQ(count===1?4:count,subject,ls,concise);
-      await setQuestionSafe(out.question);
+      await setQuestionSafe(out.question, false, out.fromBank);
       applyChoices(count===1?'open':String(count), out.choices);
+      
+      // Ensure students stay in parking lot after question changes
+      distribute(false);
+      
+      // Cue reset to ensure all students are properly positioned
+      setTimeout(() => {
+        $('#quickReset').click();
+      }, 100);
+      
       aiStatus(); toast(`AI (offline) (${mode} responses)`);
     }
   }
@@ -2648,13 +3121,30 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
       console.log('Applying choices:', out.choices);
       applyChoices(count===1?'open':String(count), out.choices);
       
+      // Ensure students stay in parking lot after question changes
+      distribute(false);
+      
+      // Cue reset to ensure all students are properly positioned
+      setTimeout(() => {
+        $('#quickReset').click();
+      }, 100);
+      
       aiStatus(); toast('AI generated');
       console.log('=== GENERATION COMPLETE ===');
     }catch(e){
       console.log('AI generation failed, using offline:', e);
       const out=offlineQ(count===1?4:count,subject,ls,concise);
-      await setQuestionSafe(out.question);
+      await setQuestionSafe(out.question, false, out.fromBank);
       applyChoices(count===1?'open':String(count), out.choices);
+      
+      // Ensure students stay in parking lot after question changes
+      distribute(false);
+      
+      // Cue reset to ensure all students are properly positioned
+      setTimeout(() => {
+        $('#quickReset').click();
+      }, 100);
+      
       aiStatus(); toast('AI (offline)');
     }
   }
@@ -2682,14 +3172,30 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
       console.log('Updating answer fields...');
       ['a1','a2','a3','a4'].forEach((id,i)=> $('#'+id).value=(out.choices?.[i]||'').replace(/^(\p{Emoji_Presentation}|\p{Emoji})\s*/u,'').trim());
       
+      // Ensure students stay in parking lot after question changes
+      distribute(false);
+      
+      // Cue reset to ensure all students are properly positioned
+      setTimeout(() => {
+        $('#quickReset').click();
+      }, 100);
+      
       aiStatus(); toast('AI generated');
       console.log('=== GENERATION COMPLETE ===');
     }catch(e){
       console.log('AI generation failed, using offline:', e);
       const out=offlineQ(count===1?4:count,subject,ls,concise);
-      await setQuestionSafe(out.question);
+      await setQuestionSafe(out.question, false, out.fromBank);
       applyChoices(count===1?'open':String(count), out.choices);
-      await setQuestionSafe(out.question);
+      
+      // Ensure students stay in parking lot after question changes
+      distribute(false);
+      
+      // Cue reset to ensure all students are properly positioned
+      setTimeout(() => {
+        $('#quickReset').click();
+      }, 100);
+      
       aiStatus(); toast('AI (offline)');
     }
   };
@@ -3026,7 +3532,7 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     }
     
     console.log('Setting question:', out.question);
-    setQuestionSafe(out.question);
+    setQuestionSafe(out.question, false, out.fromBank);
     console.log('Question set');
     
     // ensure emojis on initial choices too
