@@ -27,9 +27,25 @@
     overflow: hidden;
     touch-action: none;
   }
+  
+  /* Use small viewport height for better browser compatibility */
+  @supports (height: 100svh) {
+    #app {
+      height: 100svh;
+    }
+  }
   *{user-select:none} input,textarea,select,button{user-select:text}
 
   .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:0;height:100vh;padding:12px;box-sizing:border-box;min-height:100vh;overflow:visible;max-height:100vh}
+  
+  /* Use small viewport height for better browser compatibility */
+  @supports (height: 100svh) {
+    .app {
+      height: 100svh;
+      min-height: 100svh;
+      max-height: 100svh;
+    }
+  }
 
 /* SMART Board optimization - only apply 16:9 when screen is very wide (like 4K displays) */
 @media screen and (min-width: 3000px) {
@@ -180,8 +196,34 @@
   }
 }
 
+/* SMART Board MX065-V4 (3840×2160) and similar 4K displays */
+@media screen and (min-width: 3800px) and (min-height: 2000px) {
+  .app {
+    max-height: 85vh; /* Leave more space for SMART Board browser interface */
+    height: 85vh; /* Force height to ensure bottom bar is visible */
+  }
+  
+  .stage {
+    max-height: calc(85vh - 200px); /* Ensure stage doesn't push bottom row off screen */
+  }
+  
+  .stepsRow {
+    position: sticky;
+    bottom: 0;
+    background: #0b1226;
+    border-top: 2px solid var(--stroke);
+    z-index: 1000;
+    pointer-events: none; /* Allow touches to pass through to badges behind */
+    min-height: 50px; /* Ensure adequate height */
+  }
+  
+  .stepsRow > * {
+    pointer-events: auto; /* Re-enable pointer events for child elements */
+  }
+}
+
 /* Extra protection for very wide screens (SMART Boards) */
-@media screen and (min-width: 3000px) and (min-height: 1000px) {
+@media screen and (min-width: 3000px) and (min-height: 1000px) and (max-width: 3799px) {
   .app {
     max-height: 90vh; /* Leave more space for SMART Board toolbars */
   }
@@ -640,7 +682,17 @@ August</textarea>
   const fit = () => {
     const app = document.getElementById('app');
     if (app) {
-      app.style.height = (window.visualViewport ? window.visualViewport.height : window.innerHeight) + 'px';
+      // For SMART Boards, use a more conservative height to ensure bottom bar is visible
+      let height = window.innerHeight;
+      
+      // If we're on a large display (like SMART Board), reduce height to account for browser interface
+      if (window.innerWidth >= 3800 && window.innerHeight >= 2000) {
+        height = Math.min(height, window.innerHeight * 0.85); // Use 85% of screen height
+      } else if (window.visualViewport) {
+        height = window.visualViewport.height;
+      }
+      
+      app.style.height = height + 'px';
     }
   };
   
