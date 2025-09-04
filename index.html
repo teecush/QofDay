@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <title>MX Daily Check-In — Lexend</title>
 <link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;900&display=swap" rel="stylesheet">
@@ -17,9 +17,35 @@
     --p-yellow:#fef3c7; --p-yellow-b:#f59e0b;
   }
   html,body{height:100%;margin:0;background:radial-gradient(1200px 900px at 10% 0%, #0d1634, #0a0f1e 60%);color:var(--ink);font-family:'Lexend',system-ui,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden;min-height:100vh;min-width:100vw}
+  
+  /* Fullscreen viewport handling */
+  #app {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    overflow: hidden;
+    touch-action: none;
+  }
+  
+  /* Use small viewport height for better browser compatibility */
+  @supports (height: 100svh) {
+    #app {
+      height: 100svh;
+    }
+  }
   *{user-select:none} input,textarea,select,button{user-select:text}
 
   .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:0;height:100vh;padding:12px;box-sizing:border-box;min-height:100vh;overflow:visible;max-height:100vh}
+  
+  /* Use small viewport height for better browser compatibility */
+  @supports (height: 100svh) {
+    .app {
+      height: 100svh;
+      min-height: 100svh;
+      max-height: 100svh;
+    }
+  }
 
 /* SMART Board optimization - only apply 16:9 when screen is very wide (like 4K displays) */
 @media screen and (min-width: 3000px) {
@@ -141,7 +167,7 @@
     max-height: calc(100vh - 250px); /* Increased space for bottom row */
   }
 }
-  #badgeLayer{position:absolute;inset:0;z-index:10000;pointer-events:none}
+  #badgeLayer{position:absolute;inset:0;z-index:5000;pointer-events:none}
   #badgeLayer .badge{pointer-events:auto}
 
   .zones{display:grid;gap:10px;grid-auto-rows:minmax(180px,1fr);flex:1;min-height:0}
@@ -170,8 +196,34 @@
   }
 }
 
+/* SMART Board MX065-V4 (3840×2160) and similar 4K displays */
+@media screen and (min-width: 3800px) and (min-height: 2000px) {
+  .app {
+    max-height: 85vh; /* Leave more space for SMART Board browser interface */
+    height: 85vh; /* Force height to ensure bottom bar is visible */
+  }
+  
+  .stage {
+    max-height: calc(85vh - 200px); /* Ensure stage doesn't push bottom row off screen */
+  }
+  
+  .stepsRow {
+    position: sticky;
+    bottom: 0;
+    background: #0b1226;
+    border-top: 2px solid var(--stroke);
+    z-index: 1000;
+    pointer-events: none; /* Allow touches to pass through to badges behind */
+    min-height: 50px; /* Ensure adequate height */
+  }
+  
+  .stepsRow > * {
+    pointer-events: auto; /* Re-enable pointer events for child elements */
+  }
+}
+
 /* Extra protection for very wide screens (SMART Boards) */
-@media screen and (min-width: 3000px) and (min-height: 1000px) {
+@media screen and (min-width: 3000px) and (min-height: 1000px) and (max-width: 3799px) {
   .app {
     max-height: 90vh; /* Leave more space for SMART Board toolbars */
   }
@@ -186,13 +238,18 @@
     background: #0b1226;
     border-top: 2px solid var(--stroke);
     z-index: 1000;
+    pointer-events: none; /* Allow touches to pass through to badges behind */
+  }
+  
+  .stepsRow > * {
+    pointer-events: auto; /* Re-enable pointer events for child elements */
   }
 }
   .stepPill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-weight:900;font-size:14px;background:#0f172a;border:1px solid #1f2937}
   .stepSep{opacity:.7}
 
   /* Badges */
-  .badge{position:absolute;touch-action:none;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-weight:800;font-size:clamp(14px,1.8vw,20px);color:#0b1226;background:linear-gradient(180deg,#f8fafc,#e2e8f0);box-shadow:0 10px 22px rgba(0,0,0,.35);border:2px solid #0f172a;transition:top .25s cubic-bezier(.34,1.56,.64,1), left .25s cubic-bezier(.34,1.56,.64,1);z-index:1}
+  .badge{position:absolute;touch-action:none;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-weight:800;font-size:clamp(14px,1.8vw,20px);color:#0b1226;background:linear-gradient(180deg,#f8fafc,#e2e8f0);box-shadow:0 10px 22px rgba(0,0,0,.35);border:2px solid #0f172a;transition:top .25s cubic-bezier(.34,1.56,.64,1), left .25s cubic-bezier(.34,1.56,.64,1);z-index:5000}
   .badge.inParking:not(.teacher){background:linear-gradient(180deg,#fff1e6,#ffd7b5);border-color:#9a6a3a}
   .badge.teacher{background:linear-gradient(180deg,#fff7d6,#fde68a);border-color:#b45309}
   .badge[data-zone="partner"], .badge[data-zone="help"]{background:linear-gradient(180deg,#fee2e2,#fecaca);border-color:#dc2626}
@@ -272,6 +329,17 @@
   /* Winner modal should be above badges but below settings */
   #winnerModal{z-index:10002}
   #aiModal.show{display:flex}
+  
+  /* Highlight word styling - prevents size changes during text-to-speech */
+  .highlight-word {
+    padding: 0 !important;
+    margin: 0 !important;
+    display: inline !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    vertical-align: baseline !important;
+    box-sizing: border-box !important;
+  }
 </style>
 </head>
 <body>
@@ -307,7 +375,8 @@
       <button class="topbtn" id="openSettings">⚙️ Settings</button>
       <button class="topbtn" id="quickReset">Reset</button>
       <button class="topbtn" id="readAloudBtn">🗣️</button>
-      <button class="topbtn" id="randomBtn">🎡 Pick Random Student</button>
+      <button class="topbtn" id="randomBtn">🎡 Random Student</button>
+      <button class="topbtn" id="fullscreenBtn">[ ]</button>
     </div>
   </div>
 
@@ -596,6 +665,80 @@ August</textarea>
   const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
   const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??f}catch{return f}};
   function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1700)}
+  
+  // ---------- Fullscreen functionality ----------
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.log('Error attempting to enable fullscreen:', err);
+        toast('Fullscreen not supported');
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }
+  
+  // Defensive: handle any soft-keyboard / toolbar changes
+  const fit = () => {
+    const app = document.getElementById('app');
+    if (app) {
+      // For SMART Boards, use a more conservative height to ensure bottom bar is visible
+      let height = window.innerHeight;
+      
+      // If we're on a large display (like SMART Board), reduce height to account for browser interface
+      if (window.innerWidth >= 3800 && window.innerHeight >= 2000) {
+        height = Math.min(height, window.innerHeight * 0.85); // Use 85% of screen height
+      } else if (window.visualViewport) {
+        height = window.visualViewport.height;
+      }
+      
+      app.style.height = height + 'px';
+    }
+  };
+  
+  // Add event listeners for fullscreen and viewport changes
+  document.addEventListener('fullscreenchange', () => {
+    const isFullscreen = !!document.fullscreenElement;
+    const btn = $('#fullscreenBtn');
+    if (btn) {
+      btn.textContent = isFullscreen ? '[ ]' : '[ ]';
+    }
+  });
+  
+  addEventListener('resize', fit);
+  addEventListener('orientationchange', fit);
+  fit();
+  
+  // Fullscreen button click handler
+  $('#fullscreenBtn').onclick = toggleFullscreen;
+  
+  // Fullscreen hotkeys
+  document.addEventListener('keydown', (e) => {
+    // +/= key to enter fullscreen
+    if (e.key === '+' || e.key === '=') {
+      if (!document.fullscreenElement) {
+        e.preventDefault();
+        document.documentElement.requestFullscreen().catch(err => {
+          console.log('Error attempting to enable fullscreen:', err);
+          toast('Fullscreen not supported');
+        });
+      }
+    }
+    // -/_ key to exit fullscreen
+    else if (e.key === '-' || e.key === '_') {
+      if (document.fullscreenElement) {
+        e.preventDefault();
+        document.exitFullscreen();
+      }
+    }
+    // Esc key to exit fullscreen
+    else if (e.key === 'Escape') {
+      if (document.fullscreenElement) {
+        e.preventDefault();
+        document.exitFullscreen();
+      }
+    }
+  });
   
     // --------------- Simple AudioBank (Web Audio) ---------------
   class AudioBank {
@@ -4718,7 +4861,7 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
         const beforeWord = text.substring(0, wordStart);
         const afterWord = text.substring(wordStart + words[currentWord.originalIndex].length);
         
-        element.innerHTML = `${beforeWord}<span class="highlight-word" style="background-color: rgba(34, 211, 153, 0.5); border-radius: 4px; padding: 2px 4px;">${words[currentWord.originalIndex]}</span>${afterWord}`;
+        element.innerHTML = `${beforeWord}<span class="highlight-word" style="background-color: rgba(34, 211, 153, 0.5); border-radius: 4px; padding: 0; margin: 0; display: inline; font-size: inherit; line-height: inherit;">${words[currentWord.originalIndex]}</span>${afterWord}`;
       }
       
       // Create speech for this word
@@ -4780,32 +4923,13 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
   $('#plus30').onclick=()=>add(+30);
   $('#startPause').onclick=toggleRun;
   $('#tReset').onclick=resetT;
-  // Enhanced read button with touch support for SMART Boards
+  // Read button with proper click-to-start/click-to-stop behavior
   const readBtn = $('#readAloudBtn');
   if (readBtn) {
-    // Remove old onclick
-    readBtn.onclick = null;
+    // Simple click handler for proper click-to-start/click-to-stop behavior
+    readBtn.onclick = readAloud;
     
-    // Add multiple event listeners for maximum compatibility
-    readBtn.addEventListener('click', readAloud, { passive: false });
-    readBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      readAloud();
-    }, { passive: false });
-    readBtn.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'touch') {
-        e.preventDefault();
-        readAloud();
-      }
-    }, { passive: false });
-    
-    // Also add mousedown for immediate response
-    readBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      readAloud();
-    }, { passive: false });
-    
-    console.log('Read button enhanced with touch support for SMART Boards');
+    console.log('Read button configured for click-to-start/click-to-stop behavior');
   }
   renderTime();
 
