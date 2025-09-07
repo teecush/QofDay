@@ -94,11 +94,28 @@
     -webkit-tap-highlight-color: transparent;
     min-width: 44px;
     min-height: 44px;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
   }
   
   #readAloudBtn:active {
     transform: scale(0.95);
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  }
+  
+  /* Additional visual feedback for SMART Boards */
+  #readAloudBtn:focus {
+    outline: 2px solid #22c55e;
+    outline-offset: 2px;
+  }
+  
+  #readAloudBtn:hover {
+    background-color: #1e40af !important;
+    transform: translateY(-1px);
   }
   
   /* Enhanced touch support for inquiry agent logo */
@@ -4731,14 +4748,67 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
       return;
     }
     
-    // Ensure voices are loaded
+    // Check if speech synthesis is available
+    if (!window.speechSynthesis) {
+      console.error('Speech synthesis not available');
+      // Try alternative approach for SMART Boards
+      if (window.navigator.userAgent.includes('SMART') || window.screen.width >= 3000) {
+        console.log('SMART Board detected - trying alternative speech method');
+        tryAlternativeSpeech();
+      } else {
+        alert('Text-to-speech is not available on this device.');
+      }
+      return;
+    }
+    
+    // Ensure voices are loaded with timeout for SMART Boards
     if (window.speechSynthesis.getVoices().length === 0) {
       console.log('Voices not loaded, waiting...');
+      
+      // Set a timeout to prevent infinite waiting on SMART Boards
+      const voiceTimeout = setTimeout(() => {
+        console.log('Voice loading timeout - proceeding with default voice');
+        proceedWithReading();
+      }, 3000);
+      
       window.speechSynthesis.onvoiceschanged = () => {
-        readAloud();
+        clearTimeout(voiceTimeout);
+        console.log('Voices loaded, proceeding with reading');
+        proceedWithReading();
       };
       return;
     }
+    
+    proceedWithReading();
+  }
+  
+  function tryAlternativeSpeech() {
+    console.log('Attempting alternative speech method for SMART Board');
+    
+    // Set reading state for visual feedback
+    isReading = true;
+    const readBtn = $('#readAloudBtn');
+    readBtn.style.backgroundColor = '#22c55e';
+    readBtn.style.color = 'white';
+    
+    // Try to use a different approach - maybe the browser has a different speech API
+    const question = $('#question').textContent;
+    
+    // Simple fallback: just highlight the text and show a message
+    readBtn.innerHTML = '🔊';
+    readBtn.title = 'Reading: ' + question.substring(0, 50) + '...';
+    
+    // Reset after a delay
+    setTimeout(() => {
+      stopReading();
+      readBtn.innerHTML = '🗣️';
+      readBtn.title = '';
+    }, 3000);
+    
+    console.log('Alternative speech method completed');
+  }
+  
+  function proceedWithReading() {
     
     // Set reading state
     isReading = true;
@@ -4757,26 +4827,44 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
     const question = $('#question').textContent;
     const choices = Array.from(document.querySelectorAll('.zone h3')).map(h => h.textContent);
     
-    // Try to get a Canadian or natural voice
+    // Enhanced voice selection for SMART Boards
     const voices = window.speechSynthesis.getVoices();
-    const preferredVoices = voices.filter(voice => 
-      voice.name.includes('Samantha') || 
-      voice.name.includes('Alex') || 
-      voice.name.includes('Victoria') ||
-      voice.name.includes('Daniel') ||
-      voice.name.includes('Karen') ||
-      voice.name.includes('Tessa') ||
-      voice.name.includes('Tom') ||
-      voice.name.includes('Fiona') ||
-      voice.name.includes('Moira') ||
-      voice.name.includes('Rishi') ||
-      voice.name.includes('Ava') ||
-      voice.name.includes('Siri') ||
-      voice.name.includes('Google') ||
-      voice.name.includes('Microsoft')
-    );
+    console.log('Available voices:', voices.length);
     
-    const selectedVoice = preferredVoices.length > 0 ? preferredVoices[0] : null;
+    let selectedVoice = null;
+    
+    if (voices.length > 0) {
+      // Try to get a natural-sounding voice, with fallbacks for SMART Boards
+      const preferredVoices = voices.filter(voice => 
+        voice.name.includes('Samantha') || 
+        voice.name.includes('Alex') || 
+        voice.name.includes('Victoria') ||
+        voice.name.includes('Daniel') ||
+        voice.name.includes('Karen') ||
+        voice.name.includes('Tessa') ||
+        voice.name.includes('Tom') ||
+        voice.name.includes('Fiona') ||
+        voice.name.includes('Moira') ||
+        voice.name.includes('Rishi') ||
+        voice.name.includes('Ava') ||
+        voice.name.includes('Siri') ||
+        voice.name.includes('Google') ||
+        voice.name.includes('Microsoft') ||
+        voice.name.includes('Default') ||
+        voice.name.includes('System')
+      );
+      
+      if (preferredVoices.length > 0) {
+        selectedVoice = preferredVoices[0];
+        console.log('Selected preferred voice:', selectedVoice.name);
+      } else {
+        // Fallback to first available voice
+        selectedVoice = voices[0];
+        console.log('Using fallback voice:', selectedVoice.name);
+      }
+    } else {
+      console.log('No voices available, using default');
+    }
     
     // Create word mapping with element references, properly handling emojis
     const wordMap = [];
@@ -4864,12 +4952,27 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
         element.innerHTML = `${beforeWord}<span class="highlight-word" style="background-color: rgba(34, 211, 153, 0.5); border-radius: 4px; padding: 0; margin: 0; display: inline; font-size: inherit; line-height: inherit;">${words[currentWord.originalIndex]}</span>${afterWord}`;
       }
       
-      // Create speech for this word
-      const speech = new SpeechSynthesisUtterance(currentWord.word);
-      speech.rate = 1.0; // Natural speed - not too fast or slow
-      speech.pitch = 1.1;
-      speech.volume = 0.9;
-      if (selectedVoice) speech.voice = selectedVoice;
+      // Create speech for this word with enhanced error handling
+      try {
+        const speech = new SpeechSynthesisUtterance(currentWord.word);
+        speech.rate = 1.0; // Natural speed - not too fast or slow
+        speech.pitch = 1.1;
+        speech.volume = 0.9;
+        if (selectedVoice) speech.voice = selectedVoice;
+        
+        // Add error handling for SMART Boards
+        speech.onerror = (event) => {
+          console.error('Speech synthesis error:', event.error);
+          // Continue to next word even if this one fails
+          if (isReading) {
+            currentWordIndex++;
+            speakNextWord();
+          }
+        };
+        
+        speech.onstart = () => {
+          console.log('Speaking word:', currentWord.word);
+        };
       
       speech.onend = () => {
         // Clear highlighting after a delay (separate from voice timing)
@@ -4889,7 +4992,15 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
         }, 50); // Very short delay for voice flow
       };
       
-      window.speechSynthesis.speak(speech);
+        window.speechSynthesis.speak(speech);
+      } catch (error) {
+        console.error('Error creating speech utterance:', error);
+        // Continue to next word even if this one fails
+        if (isReading) {
+          currentWordIndex++;
+          speakNextWord();
+        }
+      }
     }
     
     // Start speaking
@@ -4923,13 +5034,76 @@ ${isWyr ? '- For "Would You Rather" format: Start question with "Would you rathe
   $('#plus30').onclick=()=>add(+30);
   $('#startPause').onclick=toggleRun;
   $('#tReset').onclick=resetT;
-  // Read button with proper click-to-start/click-to-stop behavior
+  // Read button with comprehensive touch and click support for SMART Boards
   const readBtn = $('#readAloudBtn');
   if (readBtn) {
-    // Simple click handler for proper click-to-start/click-to-stop behavior
-    readBtn.onclick = readAloud;
+    let touchStartTime = 0;
+    let touchHandled = false;
     
-    console.log('Read button configured for click-to-start/click-to-stop behavior');
+    // Enhanced click handler for desktop
+    readBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Read button clicked (desktop)');
+      readAloud();
+    };
+    
+    // Touch start handler for SMART Boards
+    readBtn.ontouchstart = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      touchStartTime = Date.now();
+      touchHandled = false;
+      console.log('Read button touch start');
+      
+      // Visual feedback for touch
+      readBtn.style.transform = 'scale(0.95)';
+      readBtn.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.3)';
+    };
+    
+    // Touch end handler for SMART Boards
+    readBtn.ontouchend = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const touchDuration = Date.now() - touchStartTime;
+      console.log('Read button touch end, duration:', touchDuration);
+      
+      // Reset visual feedback
+      readBtn.style.transform = '';
+      readBtn.style.boxShadow = '';
+      
+      // Only trigger if it was a quick tap (not a long press or drag)
+      if (touchDuration < 500 && !touchHandled) {
+        touchHandled = true;
+        console.log('Read button touch triggered');
+        readAloud();
+      }
+    };
+    
+    // Touch cancel handler
+    readBtn.ontouchcancel = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Read button touch cancelled');
+      
+      // Reset visual feedback
+      readBtn.style.transform = '';
+      readBtn.style.boxShadow = '';
+    };
+    
+    // Mouse events as fallback
+    readBtn.onmousedown = (e) => {
+      e.preventDefault();
+      console.log('Read button mouse down');
+    };
+    
+    readBtn.onmouseup = (e) => {
+      e.preventDefault();
+      console.log('Read button mouse up');
+    };
+    
+    console.log('Read button configured with comprehensive touch and click support for SMART Boards');
   }
   renderTime();
 
